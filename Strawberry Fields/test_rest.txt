@@ -1,0 +1,9 @@
+N = 1, base = fock, cf = 40, error = 0.1679
+N = 1, base = tf, cf = 40, error = 0.1485
+
+
+N = 10, base = fock, cf = 40, error = 0.1677
+N = 10, base = tf, cf = 40, error = 0.1486
+
+N = 200, base = fock, cf = 40, error = 0.1677
+N = 200, base = tf, cf = 40, error = 0.1486
