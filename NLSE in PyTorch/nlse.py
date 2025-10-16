@@ -17,36 +17,79 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 
 """" Define Operators and Functions """
-
-def dispersion_operator(beta2, dt, Nt, dz):
-    """Calculate the dispersion operator for the linear step in Fourier space using PyTorch."""
+def dispersion_operator(A, beta2, Nt, dt, dz):
+    """Apply the dispersion operator for the linear step in Fourier space using PyTorch."""
     omega = 2 * torch.pi * torch.fft.fftfreq(Nt, dt)
-    return torch.exp(0.5j * beta2 * omega**2 * dz)
-
+    linear_op = torch.exp(0.5j * beta2 * omega**2 * dz)
+    A_ft = torch.fft.fft(A)  # Transform to Fourier space
+    A_ft *= linear_op  # Apply linear operator
+    return torch.fft.ifft(A_ft)  # Transform back to real space
+    #! note - function changed on 10/12/2025 could lead to errors in other files, if implemented directly
 
 def nonlinear_operator(gamma, A, dz):
     """Apply the nonlinear operator for the nonlinear step in real space using PyTorch."""
     return A * torch.exp(1j * gamma * torch.abs(A)**2 * dz)
 
+def nonlinear_operator_xpm(gamma_j, A_j, A_k, dz):
+    """Apply the XPM operator for the nonlinear step in real space using PyTorch."""
+    return A_j * torch.exp(1j * gamma_j * (torch.abs(A_j)**2 + 2 * torch.abs(A_k)**2) * dz)
 
 def split_step_fourier(A0, dz, Nz, beta2, gamma, Lt):
     """Implement the Split-Step Fourier Method using PyTorch."""
     A = A0.clone()
     Nt = len(A)
     dt = Lt / Nt
-    linear_op = dispersion_operator(beta2, dt, Nt, dz)
     A_evolution = torch.zeros((Nt, Nz+1), dtype=torch.complex64)
     A_evolution[:, 0] = A0  # Set first column of A_evolution to be the initial pulse
 
     for i in range(Nz):
         A = nonlinear_operator(gamma, A, dz)  # Apply nonlinear operator
-        A_ft = torch.fft.fft(A)  # Transform to Fourier space
-        A_ft *= linear_op  # Apply linear operator
-        A = torch.fft.ifft(A_ft)  # Transform back to real space
+        A = dispersion_operator(A, beta2, Nt, dt, dz)  # Apply dispersion operator
 
         A_evolution[:, i+1] = A
 
     return A_evolution
+
+def split_step_fourier_xpm(A0_j, A0_k, dz, Nz, beta2_j, beta2_k, gamma_j, gamma_k, Lt, strangsplitting = True): # A_j = weak, A_k = strong
+    """Implement the Split-Step Fourier Method with XPM using PyTorch."""
+    A_j = A0_j.clone()
+    A_k = A0_k.clone()
+    Nt = len(A_j)
+    dt = Lt / Nt
+    A_j_evolution = torch.zeros((Nt, Nz+1), dtype=torch.complex64)
+    A_k_evolution = torch.zeros((Nt, Nz+1), dtype=torch.complex64)
+    A_j_evolution[:, 0] = A0_j  # Set first column of A_j_evolution to be the initial pulse
+    A_k_evolution[:, 0] = A0_k  # Set first column of A_k_evolution to be the initial pulse
+
+    for i in range(Nz):
+        # we want to preserve symmetry in both of the waves - always use the wave at i-th step to go to i+1-th step ? is this that important?
+        _A_j = A_j.clone() 
+        _A_k = A_k.clone()
+        
+        if strangsplitting:
+            A_j = nonlinear_operator_xpm(gamma_j, _A_j, _A_k, dz/2)  # Apply XPM nonlinear operator
+            A_j = dispersion_operator(A_j, beta2_j, Nt, dt, dz)  # Apply dispersion operator
+            A_j = nonlinear_operator_xpm(gamma_j, A_j, _A_k, dz/2)  # Apply XPM nonlinear operator
+            
+            A_k = nonlinear_operator_xpm(gamma_k, _A_k, _A_j, dz/2)  # Apply XPM nonlinear operator
+            A_k = dispersion_operator(A_k, beta2_k, Nt, dt, dz)  # Apply dispersion operator
+            A_k = nonlinear_operator_xpm(gamma_k, A_k, _A_j, dz/2)  # Apply XPM nonlinear operator
+            
+            A_j_evolution[:, i+1] = A_j
+            A_k_evolution[:, i+1] = A_k
+            
+        else:
+            # for weak wave j
+            A_j = nonlinear_operator_xpm(gamma_j, _A_j, _A_k, dz)  # Apply XPM nonlinear operator
+            A_j = dispersion_operator(A_j, beta2_j, Nt, dt, dz)  # Apply dispersion operator
+            A_j_evolution[:, i+1] = A_j
+            
+            # for strong wave k
+            A_k = nonlinear_operator_xpm(gamma_k, _A_k, _A_j, dz)  # Apply XPM nonlinear operator
+            A_k = dispersion_operator(A_k, beta2_k, Nt, dt, dz)  # Apply dispersion operator
+            A_k_evolution[:, i+1] = A_k
+
+    return A_j_evolution, A_k_evolution
 
 def time_derivative_fft(A, Nt, Lt):
     """Compute the first time derivative of the pulse using FFT."""
@@ -71,10 +114,13 @@ def fft(Ain):
 def ifft(Ain):
     return torch.fft.ifft(torch.fft.ifftshift(Ain))
     #return torch.fft.ifft(Ain)
+    
+def get_energy(A, dt):
+    return torch.trapz(torch.abs(A)**2, dx=torch.tensor(dt))
 
 """" Plotting functions """
 
-def plot_intensity_evolution(A_evolution, t, Lz, Nz):
+def plot_intensity_evolution(A_evolution, t, Lz, Nz, wave_name='Wave'):
     """Plot the intensity evolution in 3D using PyTorch."""
     intensity_evolution = torch.abs(A_evolution)**2
     intensity_evolution = intensity_evolution.detach().numpy().T
@@ -91,7 +137,7 @@ def plot_intensity_evolution(A_evolution, t, Lz, Nz):
     ax.set_xlabel('Time (ps)')
     ax.set_ylabel('z (km)')
     ax.set_zlabel('Intensity |A|^2')
-    ax.set_title('Intensity Evolution in NLSE')
+    ax.set_title('Intensity Evolution in NLSE for ' + wave_name)
     plt.show()
     
 def plot_intensity_comparison(input, output, t):
@@ -173,5 +219,36 @@ def plot_temporal_waveform(z_plot_list, A_evolution, t, Lz, Nz):
     plt.legend()
     plt.show()
     
+def plot_cowave_evolution(A_j_evolution, A_k_evolution, t, Lz, Nz):
+    # Create 2D intensity evolution plots
+    fig, axes = plt.subplots(1, 2, figsize=(20, 8))
+
+    # Convert time and distance arrays for plotting
+    t_plot = t.cpu().numpy()
+    z_plot = np.linspace(0, Lz, Nz+1)  # Nz+1 points to match the evolution array
+
+    # Create meshgrids for 2D plotting
+    T, Z = np.meshgrid(t_plot, z_plot)
+
+    # Plot Wave j (weak pulse) intensity evolution
+    intensity_j = torch.abs(A_j_evolution)**2
+    im1 = axes[0].pcolormesh(T, Z, intensity_j.cpu().numpy().T, shading='auto', cmap='hot')
+    axes[0].set_title('Channel 1 (Weak pulse) |A_j|²', fontsize=14)
+    axes[0].set_xlabel('Retarded Time T [ps]')
+    axes[0].set_ylabel('Propagation Distance z [km]')
+    cbar1 = plt.colorbar(im1, ax=axes[0])
+    cbar1.set_label('Intensity')
+
+    # Plot Wave k (strong trap) intensity evolution
+    intensity_k = torch.abs(A_k_evolution)**2
+    im2 = axes[1].pcolormesh(T, Z, intensity_k.cpu().numpy().T, shading='auto', cmap='plasma')
+    axes[1].set_title('Channel 2 (Strong Trap) |A_k|²', fontsize=14)
+    axes[1].set_xlabel('Retarded Time T [ps]')
+    axes[1].set_ylabel('Propagation Distance z [km]')
+    cbar2 = plt.colorbar(im2, ax=axes[1])
+    cbar2.set_label('Intensity')
+
+    plt.tight_layout()
+    plt.show()
     
 
