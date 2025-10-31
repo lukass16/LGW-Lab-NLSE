@@ -4,6 +4,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import math
 
 # Torch imports
 import torch
@@ -119,6 +120,27 @@ def get_energy(A, dt):
     return torch.trapz(torch.abs(A)**2, dx=torch.tensor(dt))
 
 """" Plotting functions """
+def plot_inputs_and_target(Ain_j, Ain_k, A_target, t):
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 5))
+    ax1.plot(t.detach().numpy(), np.abs(Ain_j.detach().numpy())**2, 'b-', linewidth=2, label='|A_j|²')
+    ax1.set_xlabel('Time')
+    ax1.set_ylabel('Intensity')
+    ax1.set_title('(Weak) Wave j')
+    ax1.grid(True)
+    ax2.plot(t.detach().numpy(), np.abs(Ain_k.detach().numpy())**2, 'r-', linewidth=2, label='|A_k|²')
+    ax2.set_xlabel('Time')
+    ax2.set_ylabel('Intensity')
+    ax2.set_title('(Strong) Wave k')
+    ax2.grid(True)
+    ax3.plot(t.detach().numpy(), np.abs(Ain_j.detach().numpy())**2, 'b--', linewidth=2, label='|A_j|²')
+    ax3.plot(t.detach().numpy(), np.abs(A_target.detach().numpy())**2, 'g-', linewidth=2, label='|A_target|²')
+    ax3.set_xlabel('Time')
+    ax3.set_ylabel('Intensity')
+    ax3.set_title('Target vs Input Wave j')
+    ax3.legend()
+    ax3.grid(True)
+    plt.tight_layout()
+    plt.show()
 
 def plot_intensity_evolution(A_evolution, t, Lz, Nz, wave_name='Wave'):
     """Plot the intensity evolution in 3D using PyTorch."""
@@ -252,3 +274,92 @@ def plot_cowave_evolution(A_j_evolution, A_k_evolution, t, Lz, Nz):
     plt.show()
     
 
+""" Hermite-Gauss HG Basis Operations"""
+
+def hermite_gauss_stable(n, t, t0=1.0):
+    """
+    Stable computation of ψ_n(t; t0) using orthonormal recursion.
+    """
+    x = t / t0
+    psi_prev = torch.zeros_like(x)
+    psi_curr = (1 / (math.pi**0.25 * math.sqrt(t0))) * torch.exp(-0.5 * x**2)
+    
+    if n == 0:
+        return psi_curr
+    for k in range(1, n + 1):
+        psi_next = math.sqrt(2 / k) * x * psi_curr - math.sqrt((k - 1) / k) * psi_prev
+        psi_prev, psi_curr = psi_curr, psi_next
+    return psi_curr
+
+def get_hg_basis(N_modes, t, t0=1.0):
+    # Precompute all HG basis functions as a 2D tensor
+    # Shape: (N_modes, len(t)) where each row is ψ_n(t)
+    hg_basis = torch.zeros(N_modes, len(t), dtype=torch.float64)
+
+    for n in range(N_modes):
+        hg_basis[n] = hermite_gauss_stable(n, t, t0)
+        
+    print(f"Precomputed {N_modes} HG basis functions on grid of {len(t)} points")
+    
+    return hg_basis
+
+def time_to_hg(A, hg_basis, dt):
+    # Matrix multiplication: each row of hg_basis dotted with A
+    # Shape: (N_modes,) = (N_modes, len(t)) @ (len(t),)
+    integrand = hg_basis * A[None, :]  # Broadcast A to match hg_basis shape
+    coefficients = torch.trapz(integrand, dx=dt, dim=1)
+    return coefficients
+
+def hg_to_time(coefficients, hg_basis):
+    # Matrix-vector multiplication: coefficients^T @ hg_basis
+    # Shape: (len(t),) = (N_modes,) @ (N_modes, len(t))
+    A = torch.sum(coefficients[:, None] * hg_basis, dim=0)
+    return A
+
+def analyze_pulse_in_hg_basis(pulse, hg_basis, t, pulse_name="Pulse"):
+    
+    dt = t[1]-t[0]
+    hg_coefficients = time_to_hg(pulse, hg_basis, dt)
+
+    # Reconstruct the pulse from the truncated HG basis
+    reconstructed_pulse = hg_to_time(hg_coefficients, hg_basis)
+    
+    # Plot the HG coefficients
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 12))
+    
+    # Plot 1: HG coefficients
+    mode_indices = torch.arange(hg_basis.shape[0])
+    ax1.stem(mode_indices.numpy(), hg_coefficients.numpy(), basefmt=' ')
+    ax1.set_xlabel('HG Mode Index n')
+    ax1.set_ylabel('Coefficient Amplitude')
+    ax1.set_title(f'Hermite-Gauss Coefficients of {pulse_name}')
+    ax1.grid(True, alpha=0.3)
+    
+    # Plot 2: Original vs reconstructed pulse
+    ax2.plot(t.numpy(), pulse.numpy(), 'b-', linewidth=2, label=f'Original {pulse_name}')
+    ax2.plot(t.numpy(), reconstructed_pulse.numpy(), 'r--', linewidth=2, label=f'Reconstructed (N={hg_basis.shape[0]} modes)')
+    ax2.set_xlabel('Time')
+    ax2.set_ylabel('Amplitude')
+    ax2.set_title(f'Original vs Reconstructed {pulse_name}')
+    ax2.legend()
+    ax2.grid(True, alpha=0.3)
+    
+    # Plot 3: Reconstruction error
+    error = pulse - reconstructed_pulse
+    ax3.plot(t.numpy(), error.numpy(), 'g-', linewidth=1)
+    ax3.set_xlabel('Time')
+    ax3.set_ylabel('Error')
+    ax3.set_title('Reconstruction Error')
+    ax3.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.show()
+    
+    # Print some statistics
+    print(f"Original pulse energy: {torch.trapz(pulse**2, dx=dt):.6f}")
+    print(f"Reconstructed pulse energy: {torch.trapz(reconstructed_pulse**2, dx=dt):.6f}")
+    print(f"RMS error: {torch.sqrt(torch.mean(error**2)):.6f}")
+    print(f"Max coefficient magnitude: {torch.max(torch.abs(hg_coefficients)):.6f}")
+    print(f"Number of significant coefficients (>1% of max): {torch.sum(torch.abs(hg_coefficients) > 0.01 * torch.max(torch.abs(hg_coefficients)))}")
+    
+    return error
