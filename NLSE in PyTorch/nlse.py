@@ -92,6 +92,71 @@ def split_step_fourier_xpm(A0_j, A0_k, dz, Nz, beta2_j, beta2_k, gamma_j, gamma_
 
     return A_j_evolution, A_k_evolution
 
+def split_step_fourier_xpm_batch(A0_j, A0_k, dz, Nz, beta2_j, beta2_k, gamma_j, gamma_k, Lt, strangsplitting=True):
+    """Implement the Split-Step Fourier Method with XPM for batched inputs using PyTorch.
+    
+    Args:
+        A0_j: Initial weak wave, tensor of shape (B, Nt)
+        A0_k: Initial strong wave, tensor of shape (Nt,) - same for all batches
+        dz: Propagation step size (scalar)
+        Nz: Number of propagation steps (integer)
+        beta2_j: Dispersion parameter for weak wave, scalar or tensor of shape (B,)
+        beta2_k: Dispersion parameter for strong wave, scalar or tensor of shape (B,)
+        gamma_j: Nonlinearity parameter for weak wave, scalar or tensor of shape (B,)
+        gamma_k: Nonlinearity parameter for strong wave, scalar or tensor of shape (B,)
+        Lt: Time window (scalar)
+        strangsplitting: Whether to use Strang splitting (default: True)
+    
+    Returns:
+        A_j_evolution: Weak wave evolution, tensor of shape (B, Nt, Nz+1)
+        A_k_evolution: Strong wave evolution, tensor of shape (B, Nt, Nz+1)
+    """
+    A_j = A0_j.clone()
+    B, Nt = A_j.shape
+    
+    # Expand A0_k to match batch dimension
+    A_k = A0_k.unsqueeze(0).expand(B, -1).clone()
+    
+    dt = Lt / Nt
+    
+    # Initialize evolution arrays with shape (B, Nt, Nz+1)
+    A_j_evolution = torch.zeros((B, Nt, Nz+1), dtype=torch.complex64, device=A0_j.device)
+    A_k_evolution = torch.zeros((B, Nt, Nz+1), dtype=torch.complex64, device=A0_j.device)
+    A_j_evolution[:, :, 0] = A0_j  # Set first time slice to initial pulse
+    A_k_evolution[:, :, 0] = A_k  # Set first time slice to initial pulse
+
+    for i in range(Nz):
+        # Clone to preserve symmetry in both waves
+        _A_j = A_j.clone() 
+        _A_k = A_k.clone()
+        
+        if strangsplitting:
+            # Apply Strang splitting for weak wave j
+            A_j = nonlinear_operator_xpm(gamma_j, _A_j, _A_k, dz/2)
+            A_j = dispersion_operator(A_j, beta2_j, Nt, dt, dz)
+            A_j = nonlinear_operator_xpm(gamma_j, A_j, _A_k, dz/2)
+            
+            # Apply Strang splitting for strong wave k
+            A_k = nonlinear_operator_xpm(gamma_k, _A_k, _A_j, dz/2)
+            A_k = dispersion_operator(A_k, beta2_k, Nt, dt, dz)
+            A_k = nonlinear_operator_xpm(gamma_k, A_k, _A_j, dz/2)
+            
+            A_j_evolution[:, :, i+1] = A_j
+            A_k_evolution[:, :, i+1] = A_k
+            
+        else:
+            # Standard splitting for weak wave j
+            A_j = nonlinear_operator_xpm(gamma_j, _A_j, _A_k, dz)
+            A_j = dispersion_operator(A_j, beta2_j, Nt, dt, dz)
+            A_j_evolution[:, :, i+1] = A_j
+            
+            # Standard splitting for strong wave k
+            A_k = nonlinear_operator_xpm(gamma_k, _A_k, _A_j, dz)
+            A_k = dispersion_operator(A_k, beta2_k, Nt, dt, dz)
+            A_k_evolution[:, :, i+1] = A_k
+
+    return A_j_evolution, A_k_evolution # returns tensors of shape (B, Nt, Nz+1)
+
 def time_derivative_fft(A, Nt, Lt):
     """Compute the first time derivative of the pulse using FFT."""
     dt = Lt / Nt
@@ -294,7 +359,7 @@ def hermite_gauss_stable(n, t, t0=1.0):
 def get_hg_basis(N_modes, t, t0=1.0):
     # Precompute all HG basis functions as a 2D tensor
     # Shape: (N_modes, len(t)) where each row is ψ_n(t)
-    hg_basis = torch.zeros(N_modes, len(t), dtype=torch.float64)
+    hg_basis = torch.zeros(N_modes, len(t), dtype=torch.float32)
 
     for n in range(N_modes):
         hg_basis[n] = hermite_gauss_stable(n, t, t0)
@@ -308,13 +373,13 @@ def time_to_hg(A, hg_basis, dt):
     # Shape: (N_modes,) = (N_modes, len(t)) @ (len(t),)
     integrand = hg_basis * A[None, :]  # Broadcast A to match hg_basis shape
     coefficients = torch.trapz(integrand, dx=dt, dim=1)
-    return coefficients
+    return coefficients.float()
 
 def hg_to_time(coefficients, hg_basis):
     # Matrix-vector multiplication: coefficients^T @ hg_basis
     # Shape: (len(t),) = (N_modes,) @ (N_modes, len(t))
     A = torch.sum(coefficients[:, None] * hg_basis, dim=0)
-    return A
+    return A.float()
 
 def analyze_pulse_in_hg_basis(pulse, hg_basis, t, pulse_name="Pulse"):
     
