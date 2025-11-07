@@ -448,7 +448,7 @@ def save_model_parameters(training_setup, run_dir):
 
 def main():
     parser = argparse.ArgumentParser(description='Train XPM Identity Operator')
-    parser.add_argument('--config', type=str, default='config.yaml',
+    parser.add_argument('--config', type=str, default='configs/config.yaml',
                         help='Path to configuration YAML file')
     parser.add_argument('--run-dir', type=str, default=None,
                         help='Custom run directory (default: auto-generated)')
