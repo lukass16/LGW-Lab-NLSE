@@ -104,30 +104,30 @@ def setup_training(config, device):
     pulse = config['pulse']
     train = config['training']
     
-    # Extract simulation parameters
-    Lz = sim['Lz']
-    Nz = sim['Nz']
-    Lt = sim['Lt']
-    Nt = sim['Nt']
-    N_modes = sim['N_modes']
+    # Extract simulation parameters (convert to appropriate types)
+    Lz = float(sim['Lz'])
+    Nz = int(sim['Nz'])
+    Lt = float(sim['Lt'])
+    Nt = int(sim['Nt'])
+    N_modes = int(sim['N_modes'])
     
-    # Extract medium parameters
-    beta2_j = med['beta2_j']
-    beta2_k = med['beta2_k']
-    gamma_j = med['gamma_j']
-    gamma_k = med['gamma_k']
+    # Extract medium parameters (convert to appropriate types)
+    beta2_j = float(med['beta2_j'])
+    beta2_k = float(med['beta2_k'])
+    gamma_j = float(med['gamma_j'])
+    gamma_k = float(med['gamma_k'])
     
-    # Extract pulse parameters
-    tau = pulse['tau']
+    # Extract pulse parameters (convert to appropriate types)
+    tau = float(pulse['tau'])
     
-    # Extract training parameters
-    batch_size = train['batch_size']
-    amplitude_downscale = train['amplitude_downscale']
-    mask_percent = train['mask_percent']
-    m = train['m']
-    w_mse = train['w_mse']
-    w_pen = train['w_pen']
-    lr = train['lr']
+    # Extract training parameters (convert to appropriate types)
+    batch_size = int(train['batch_size'])
+    amplitude_downscale = float(train['amplitude_downscale'])
+    mask_percent = float(train['mask_percent'])
+    m = int(train['m'])
+    w_mse = float(train['w_mse'])
+    w_pen = float(train['w_pen'])
+    lr = float(train['lr'])
     
     # Calculate derived parameters
     dz = Lz / Nz

@@ -39,7 +39,7 @@ plotting:
 # Wandb Configuration
 wandb:
   project: "xpm-identity-operator"
-  entity: lukasskellijs           # Set to your wandb entity/username, or null for default
+  entity: lgwlab           # Set to your wandb entity/username, or null for default
   name: 16-modes             # Set to a specific run name, or null for auto-generated
   tags: []               # List of tags for this run
   notes: "Initial training for using 16 Hermite-Gauss Modes"              # Notes about this run
