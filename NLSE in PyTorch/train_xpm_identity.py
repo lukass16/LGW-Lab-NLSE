@@ -303,6 +303,10 @@ def save_plots(config, training_setup, A_j_evolution, A_k_evolution, losses, run
     plot = config['plotting']
     train = config['training']
     
+    # Convert simulation parameters to appropriate types
+    Lz = float(sim['Lz'])
+    Nz = int(sim['Nz'])
+    
     t = training_setup['t']
     x = training_setup['x']
     y = training_setup['y']
@@ -357,8 +361,8 @@ def save_plots(config, training_setup, A_j_evolution, A_k_evolution, losses, run
     plot_intensity_evolution(
         A_j_evolution[mode_nr, :, :], 
         t, 
-        sim['Lz'], 
-        sim['Nz'], 
+        Lz, 
+        Nz, 
         wave_name='Wave j'
     )
     # Get the current figure and save it
@@ -369,8 +373,8 @@ def save_plots(config, training_setup, A_j_evolution, A_k_evolution, losses, run
     plot_intensity_evolution(
         A_k_evolution[mode_nr, :, :], 
         t, 
-        sim['Lz'], 
-        sim['Nz'], 
+        Lz, 
+        Nz, 
         wave_name='Wave k'
     )
     fig = plt.gcf()
@@ -382,8 +386,8 @@ def save_plots(config, training_setup, A_j_evolution, A_k_evolution, losses, run
         A_j_evolution[mode_nr, :, :].detach().clone(),
         A_k_evolution[mode_nr, :, :].detach().clone(),
         t,
-        sim['Lz'],
-        sim['Nz']
+        Lz,
+        Nz
     )
     fig = plt.gcf()
     fig.savefig(plots_dir / "cowave_evolution.png", dpi=150, bbox_inches='tight')
@@ -439,7 +443,7 @@ def save_model_parameters(training_setup, run_dir):
     
     # Save as PyTorch state dict
     state_dict_path = params_dir / "theta_state_dict.pt"
-    torch.save({'theta': theta.state_dict()}, state_dict_path)
+    torch.save({'theta': theta}, state_dict_path)
     
     print(f"Model parameters saved to {params_dir}")
 
