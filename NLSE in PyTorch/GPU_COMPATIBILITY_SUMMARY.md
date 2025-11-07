@@ -126,3 +126,9 @@ To verify GPU usage:
 2. Run Cell 20 - shows GPU memory usage and confirms tensor devices
 3. Monitor GPU utilization using `nvidia-smi` in terminal (if on CUDA)
 
+
+
+
+
+
+
