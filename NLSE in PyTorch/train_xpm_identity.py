@@ -339,22 +339,6 @@ def save_plots(config, training_setup, A_j_evolution, A_k_evolution, losses, run
     plt.savefig(plots_dir / "training_loss.png", dpi=150, bbox_inches='tight')
     plt.close()
     
-    # 2. Initial HG modes plot
-    plt.figure(figsize=(10, 6))
-    modes_to_plot = plot.get('modes_to_plot', [0, 4, 15])
-    for mode in modes_to_plot:
-        if mode < len(x):
-            plt.plot(t_center, (torch.abs(x[mode])**2)[start_idx:end_idx].cpu().numpy(), 
-                    label=f'Mode {mode} (real)')
-    plt.xlabel('Time')
-    plt.ylabel('Amplitude')
-    plt.title('Selected HG Modes')
-    plt.legend()
-    plt.grid(True)
-    plt.tight_layout()
-    plt.savefig(plots_dir / "initial_hg_modes.png", dpi=150, bbox_inches='tight')
-    plt.close()
-    
     # 3. Intensity evolution plots
     # Note: plot_intensity_evolution calls plt.show(), but with Agg backend it won't display
     # We save the figure after the function call
