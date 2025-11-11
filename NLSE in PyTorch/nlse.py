@@ -10,8 +10,18 @@ import math
 import torch
 
 # Device management - automatically use GPU if available
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-print(f"Using device: {device}")
+# Wrap in try-except to prevent kernel crashes if CUDA is misconfigured
+try:
+    if torch.cuda.is_available():
+        device = torch.device('cuda')
+        print(f"Using device: {device}")
+    else:
+        device = torch.device('cpu')
+        print(f"Using device: {device}")
+except Exception as e:
+    device = torch.device('cpu')
+    print(f"CUDA check failed, defaulting to CPU. Error: {e}")
+    print(f"Using device: {device}")
 
 # Update the matplotlib configuration parameters
 plt.rcParams.update({'font.size': 14})
