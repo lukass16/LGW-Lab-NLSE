@@ -62,13 +62,17 @@ def setup_device(config):
     return device
 
 
-def create_run_directory(base_dir='runs'):
-    """Create a unique run directory with timestamp."""
+def create_run_directory(base_dir='runs', name=None):
+    """Create a unique run directory with given name or timestamp."""
     base_path = Path(base_dir)
     base_path.mkdir(exist_ok=True)
     
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    run_dir = base_path / f"run_{timestamp}"
+    if name:
+        run_dir = base_path / name
+    else:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        run_dir = base_path / f"run_{timestamp}"
+    
     run_dir.mkdir(exist_ok=True)
     
     return run_dir
@@ -457,7 +461,9 @@ def main():
         run_dir = Path(args.run_dir)
         run_dir.mkdir(parents=True, exist_ok=True)
     else:
-        run_dir = create_run_directory()
+        # Use wandb name if available, otherwise use timestamp
+        wandb_name = config.get('wandb', {}).get('name')
+        run_dir = create_run_directory(name=wandb_name)
     
     print(f"\nRun directory: {run_dir}")
     

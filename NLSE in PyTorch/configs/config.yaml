@@ -25,10 +25,10 @@ training:
   amplitude_downscale: 1e-1  # Downscaling factor for input amplitudes
   mask_percent: 0.9      # Size of the unpenalized region in percent of the total temporal window
   m: 8                   # Number of slices to check for penalty
-  w_mse: 1e4             # MSE loss weight
-  w_pen: 1e3             # Penalty loss weight
-  lr: 5e-2               # Learning rate
-  N_train: 3000            # Number of training iterations
+  w_mse: 1e5             # MSE loss weight
+  w_pen: 1e4             # Penalty loss weight
+  lr: 1e-2               # Learning rate
+  N_train: 5000            # Number of training iterations
 
 # Plotting Parameters
 plotting:
@@ -39,7 +39,7 @@ plotting:
 wandb:
   project: "xpm-identity-operator"
   entity: lgwlab           # Set to your wandb entity/username, or null for default
-  name: 16-modes-high-n             # Set to a specific run name, or null for auto-generated
+  name: 16-modes-high-n-exp             # Set to a specific run name, or null for auto-generated
   tags: []               # List of tags for this run
   notes: "Initial training for using 16 Hermite-Gauss Modes"              # Notes about this run
 
