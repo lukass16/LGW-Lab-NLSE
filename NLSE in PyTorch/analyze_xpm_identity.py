@@ -99,6 +99,67 @@ def forward_pass(theta, setup):
     return A_j_evolution, A_k_evolution
 
 
+def plot_input_pulse(theta, setup, run_dir, show_plot=False):
+    """Plot the final solved input pulse (parametrized by theta)."""
+    t = setup['t']
+    hg_basis = setup['hg_basis']
+    
+    # Convert theta from HG basis to time domain
+    Ain_k = hg_to_time(theta, hg_basis)
+    
+    # Convert to numpy for plotting
+    t_np = t.cpu().numpy()
+    Ain_k_np = Ain_k.detach().cpu().numpy()
+    
+    # Calculate intensity and phase
+    intensity = np.abs(Ain_k_np)**2
+    phase = np.angle(Ain_k_np)
+    
+    # Calculate time window for plotting (center 30%)
+    plot_percent = 0.4
+    total_points = len(t_np)
+    center_points = int(total_points * plot_percent)
+    start_idx = (total_points - center_points) // 2
+    end_idx = start_idx + center_points
+    t_plot = t_np[start_idx:end_idx]
+    intensity_plot = intensity[start_idx:end_idx]
+    phase_plot = phase[start_idx:end_idx]
+    
+    # Create figure with two subplots
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
+    
+    # Plot intensity
+    ax1.plot(t_plot, intensity_plot, 'b-', linewidth=2, label='Intensity')
+    ax1.set_xlabel('Time', fontsize=11)
+    ax1.set_ylabel('Intensity |A|²', fontsize=11)
+    ax1.set_title('Input Pulse Intensity (from theta)', fontsize=12)
+    ax1.legend(fontsize=10)
+    ax1.grid(True, alpha=0.3)
+    
+    # Plot phase
+    ax2.plot(t_plot, phase_plot, 'r-', linewidth=2, label='Phase')
+    ax2.set_xlabel('Time', fontsize=11)
+    ax2.set_ylabel('Phase (radians)', fontsize=11)
+    ax2.set_title('Input Pulse Phase (from theta)', fontsize=12)
+    ax2.legend(fontsize=10)
+    ax2.grid(True, alpha=0.3)
+    
+    plt.suptitle('Final Solved Input Pulse (parametrized by theta)', fontsize=14, y=0.995)
+    plt.tight_layout()
+    
+    if show_plot:
+        # Display plot interactively
+        plt.show()
+    else:
+        # Save plot to plots folder in run directory
+        plots_dir = Path(run_dir) / "plots"
+        plots_dir.mkdir(exist_ok=True)
+        output_path = plots_dir / "input_pulse.png"
+        plt.savefig(output_path, dpi=150, bbox_inches='tight')
+        print(f"Input pulse plot saved to {output_path}")
+        plt.close()
+
+
 def plot_mode_comparison(setup, A_j_evolution, run_dir, show_plot=False):
     """Create a 4x4 grid plot showing all 16 modes: target vs final output."""
     y = setup['y']
@@ -180,6 +241,10 @@ def main():
     print("Reconstructing simulation setup...")
     setup = reconstruct_setup(config, device)
     print(f"Batch size: {setup['x'].shape[0]}")
+    
+    # Plot input pulse
+    print("Plotting input pulse...")
+    plot_input_pulse(theta, setup, args.run_dir, show_plot=args.show)
     
     # Run forward pass
     print("Running forward pass...")
