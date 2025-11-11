@@ -3,9 +3,9 @@
 # Simulation Parameters
 simulation:
   Lz: 1e-3              # Propagation distance in km (1cm = 1e-5)
-  Nz: 100               # Number of steps in z
-  Lt: 14                 # Temporal window size
-  Nt: 2048               # Number of temporal points
+  Nz: 200               # Number of steps in z
+  Lt: 16                 # Temporal window size
+  Nt: 4096               # Number of temporal points
   N_modes: 500           # Number of HG modes
 
 # Medium Parameters
@@ -23,12 +23,12 @@ pulse:
 training:
   batch_size: 16         # Number of modes to simulate (batch size)
   amplitude_downscale: 1e-1  # Downscaling factor for input amplitudes
-  mask_percent: 0.9      # Size of the unpenalized region in percent of the total temporal window
+  mask_percent: 0.8      # Size of the unpenalized region in percent of the total temporal window
   m: 8                   # Number of slices to check for penalty
-  w_mse: 1e5             # MSE loss weight
-  w_pen: 1e4             # Penalty loss weight
-  lr: 1e-2               # Learning rate
-  N_train: 5000            # Number of training iterations
+  w_mse: 1e4             # MSE loss weight
+  w_pen: 1e3             # Penalty loss weight
+  lr: 5e-2               # Learning rate
+  N_train: 10000            # Number of training iterations
 
 # Plotting Parameters
 plotting:
@@ -39,7 +39,7 @@ plotting:
 wandb:
   project: "xpm-identity-operator"
   entity: lgwlab           # Set to your wandb entity/username, or null for default
-  name: 16-modes-high-n-exp             # Set to a specific run name, or null for auto-generated
+  name: 16-modes-high-n-high-N             # Set to a specific run name, or null for auto-generated
   tags: []               # List of tags for this run
   notes: "Initial training for using 16 Hermite-Gauss Modes"              # Notes about this run
 
