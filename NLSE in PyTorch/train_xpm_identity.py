@@ -173,6 +173,46 @@ def setup_training(config, device):
         
         return w_mse * mse_loss, w_pen * pen_loss
     
+    #! TEST: Alternative loss function - HG coefficients
+    # define y_hg - the target HG coefficients (simply identity tensor of size B x B)
+    y_hg = torch.eye(B, dtype=torch.float32, device=device)
+    def hg_loss_function(A_j_evolution, A_k_evolution):
+        final_j = A_j_evolution[:, :, -1] # shape: (B, Nt)
+        final_j_hg = time_to_hg(final_j, hg_basis, dt) # shape: (B, N_modes)
+        # cutoff the HG coefficients to only keep the first B modes
+        final_j_hg = final_j_hg[:, :B] # shape: (B - batches, B - modes)
+        # calculate the MSE loss between the final HG coefficients and the target HG coefficients
+        mse_loss = F.mse_loss(final_j_hg, y_hg)
+        
+        
+        pen_loss = 0.0
+        zeros = torch.zeros(B, Nt, dtype=torch.float32, device=device)
+        # Penalization loss - to enforce none of the waves to stray outside the simulation bounds
+        for i in iters:
+            pen_loss = pen_loss + F.mse_loss(torch.abs(A_k_evolution[:, :, i]*penalty)**2, zeros)
+            
+        return w_mse * mse_loss, w_pen * pen_loss
+    
+    #! TEST: Alternative loss function - HG coefficients normalized
+    def normalized_hg_loss_function(A_j_evolution, A_k_evolution):
+        final_j = A_j_evolution[:, :, -1] # shape: (B, Nt)
+        final_j_hg = time_to_hg(final_j, hg_basis, dt) # shape: (B, N_modes)
+        # cutoff the HG coefficients to only keep the first B modes
+        final_j_hg = final_j_hg[:, :B] # shape: (B - batches, B - modes)
+        # Add epsilon for numerical stability during normalization
+        eps = 1e-8
+        final_j_hg_normalized = final_j_hg / (torch.norm(final_j_hg, dim=1, keepdim=True) + eps)
+        # calculate the MSE loss between the final HG coefficients and the target HG coefficients
+        mse_loss = F.mse_loss(final_j_hg_normalized, y_hg)
+    
+        pen_loss = 0.0
+        zeros = torch.zeros(B, Nt, dtype=torch.float32, device=device)
+        # Penalization loss - to enforce none of the waves to stray outside the simulation bounds
+        for i in iters:
+            pen_loss = pen_loss + F.mse_loss(torch.abs(A_k_evolution[:, :, i]*penalty)**2, zeros)
+            
+        return w_mse * mse_loss, w_pen * pen_loss
+    
     # Define forward pass
     def forward(theta, hg_basis):
         Ain_k = hg_to_time(theta, hg_basis)
@@ -198,6 +238,8 @@ def setup_training(config, device):
         'mask': mask,
         'iters': iters,
         'loss_function': loss_function,
+        'hg_loss_function': hg_loss_function,
+        'normalized_hg_loss_function': normalized_hg_loss_function,
         'forward': forward,
         'optimizer': optimizer,
         'dz': dz,
@@ -205,7 +247,7 @@ def setup_training(config, device):
     }
 
 
-def train_loop(config, training_setup, device, run_dir, use_wandb=True):
+def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_name='basic'):
     """Main training loop."""
     train = config['training']
     sim = config['simulation']
@@ -214,7 +256,18 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True):
     # Extract training setup
     theta = training_setup['theta']
     hg_basis = training_setup['hg_basis']
-    loss_function = training_setup['loss_function']
+    
+    # Select the loss function based on the loss_fn_name argument
+    if loss_fn_name == 'hg':
+        loss_function = training_setup['hg_loss_function']
+        print(f"Using HG coefficient loss function")
+    elif loss_fn_name == 'normalized_hg':
+        loss_function = training_setup['normalized_hg_loss_function']
+        print(f"Using normalized HG coefficient loss function")
+    else:  # 'basic'
+        loss_function = training_setup['loss_function']
+        print(f"Using basic loss function")
+    
     forward = training_setup['forward']
     optimizer = training_setup['optimizer']
     
@@ -239,6 +292,13 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True):
     losses_pen = []
     losses = []
     
+    # Track best model for checkpoint saving
+    best_loss = float('inf')
+    best_theta = None
+    best_iteration = -1
+    checkpoint_dir = run_dir / "checkpoints"
+    checkpoint_dir.mkdir(exist_ok=True)
+    
     print(f"\nStarting training for {train['N_train']} iterations...")
     for i in tqdm(range(train['N_train']), desc="Training"):
         optimizer.zero_grad()
@@ -257,20 +317,43 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True):
         losses_pen.append(loss_pen_val)
         losses.append(loss_val)
         
+        # Check if this is the best model so far
+        if loss_val < best_loss:
+            best_loss = loss_val
+            best_iteration = i
+            # Save a deep copy of the best theta
+            best_theta = theta.data.clone().detach()
+            
+            # Save checkpoint
+            checkpoint_path = checkpoint_dir / "best_checkpoint.pt"
+            torch.save({
+                'iteration': i,
+                'theta': best_theta,
+                'loss': loss_val,
+                'loss_mse': loss_mse_val,
+                'loss_pen': loss_pen_val,
+            }, checkpoint_path)
+        
         # Log to wandb
         if use_wandb and WANDB_AVAILABLE:
             wandb.log({
                 'iteration': i,
                 'loss': loss_val,
                 'loss_mse': loss_mse_val,
-                'loss_pen': loss_pen_val
+                'loss_pen': loss_pen_val,
+                'best_loss': best_loss,
             })
         
         # Print progress every few iterations
         if (i + 1) % max(1, train['N_train'] // 10) == 0:
-            print(f"Iteration {i+1}/{train['N_train']}: Loss={loss_val:.6f}, MSE={loss_mse_val:.6f}, Pen={loss_pen_val:.6f}")
+            print(f"Iteration {i+1}/{train['N_train']}: Loss={loss_val:.6f}, MSE={loss_mse_val:.6f}, Pen={loss_pen_val:.6f}, Best={best_loss:.6f} (iter {best_iteration+1})")
     
-    # Final forward pass for evaluation
+    # Restore best model before final evaluation
+    if best_theta is not None:
+        print(f"\nRestoring best model from iteration {best_iteration+1} (loss={best_loss:.6f})")
+        theta.data.copy_(best_theta)
+    
+    # Final forward pass for evaluation (using best model)
     with torch.no_grad():
         A_j_evolution, A_k_evolution = forward(theta, hg_basis)
     
@@ -281,7 +364,11 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True):
         'losses_pen': losses_pen,
         'final_loss': losses[-1],
         'final_loss_mse': losses_mse[-1],
-        'final_loss_pen': losses_pen[-1]
+        'final_loss_pen': losses_pen[-1],
+        'best_loss': best_loss,
+        'best_iteration': best_iteration,
+        'best_loss_mse': losses_mse[best_iteration] if best_iteration >= 0 else None,
+        'best_loss_pen': losses_pen[best_iteration] if best_iteration >= 0 else None,
     }
     
     # Save losses to file
@@ -294,11 +381,13 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True):
         wandb.log({
             'final_loss': losses[-1],
             'final_loss_mse': losses_mse[-1],
-            'final_loss_pen': losses_pen[-1]
+            'final_loss_pen': losses_pen[-1],
+            'best_loss': best_loss,
+            'best_iteration': best_iteration,
         })
         wandb.finish()
     
-    return A_j_evolution, A_k_evolution, final_losses
+    return A_j_evolution, A_k_evolution, final_losses, best_iteration, best_loss
 
 
 def save_plots(config, training_setup, A_j_evolution, A_k_evolution, losses, run_dir):
@@ -419,8 +508,9 @@ def save_plots(config, training_setup, A_j_evolution, A_k_evolution, losses, run
     print(f"\nPlots saved to {plots_dir}")
 
 
-def save_model_parameters(training_setup, run_dir):
-    """Save the trained model parameters."""
+def save_model_parameters(training_setup, run_dir, best_iteration=None, best_loss=None):
+    # *somewhat redundant, since the best model is already saved in the checkpoint, but it saves a clean additional numpy copy of the best theta
+    """Save the trained model parameters (best model from training)."""
     theta = training_setup['theta']
     params_dir = run_dir / "parameters"
     params_dir.mkdir(exist_ok=True)
@@ -431,9 +521,17 @@ def save_model_parameters(training_setup, run_dir):
     
     # Save as PyTorch state dict
     state_dict_path = params_dir / "theta_state_dict.pt"
-    torch.save({'theta': theta}, state_dict_path)
+    save_dict = {'theta': theta}
+    if best_iteration is not None:
+        save_dict['best_iteration'] = best_iteration
+    if best_loss is not None:
+        save_dict['best_loss'] = best_loss
+    torch.save(save_dict, state_dict_path)
     
-    print(f"Model parameters saved to {params_dir}")
+    if best_iteration is not None and best_loss is not None:
+        print(f"Best model parameters (iteration {best_iteration+1}, loss={best_loss:.6f}) saved to {params_dir}")
+    else:
+        print(f"Model parameters saved to {params_dir}")
 
 
 """--------------------------------- Main Function ---------------------------------"""
@@ -446,6 +544,9 @@ def main():
                         help='Custom run directory (default: auto-generated)')
     parser.add_argument('--no-wandb', action='store_true',
                         help='Disable wandb logging')
+    parser.add_argument('--loss-fn', type=str, default='basic',
+                        choices=['basic', 'hg', 'normalized_hg'],
+                        help='Loss function to use: basic (default), hg, or normalized_hg')
     
     args = parser.parse_args()
     
@@ -477,18 +578,19 @@ def main():
     
     # Run training
     print("\nStarting training...")
-    A_j_evolution, A_k_evolution, losses = train_loop(
+    A_j_evolution, A_k_evolution, losses, best_iteration, best_loss = train_loop(
         config, training_setup, device, run_dir, 
-        use_wandb=not args.no_wandb
+        use_wandb=not args.no_wandb,
+        loss_fn_name=args.loss_fn
     )
     
     # Save plots
     print("\nGenerating and saving plots...")
     save_plots(config, training_setup, A_j_evolution, A_k_evolution, losses, run_dir)
     
-    # Save model parameters
+    # Save model parameters (best model)
     print("\nSaving model parameters...")
-    save_model_parameters(training_setup, run_dir)
+    save_model_parameters(training_setup, run_dir, best_iteration, best_loss)
     
     print(f"\n{'='*80}")
     print(f"Training completed successfully!")
