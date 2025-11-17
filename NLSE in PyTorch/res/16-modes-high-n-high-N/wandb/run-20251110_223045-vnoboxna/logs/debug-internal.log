@@ -1,0 +1,12 @@
+{"time":"2025-11-10T22:30:45.668789442-05:00","level":"INFO","msg":"stream: starting","core version":"0.22.3"}
+{"time":"2025-11-10T22:30:45.895340161-05:00","level":"INFO","msg":"stream: created new stream","id":"vnoboxna"}
+{"time":"2025-11-10T22:30:45.895429104-05:00","level":"INFO","msg":"handler: started","stream_id":"vnoboxna"}
+{"time":"2025-11-10T22:30:45.897773291-05:00","level":"INFO","msg":"stream: started","id":"vnoboxna"}
+{"time":"2025-11-10T22:30:45.897781875-05:00","level":"INFO","msg":"writer: started","stream_id":"vnoboxna"}
+{"time":"2025-11-10T22:30:45.897802383-05:00","level":"INFO","msg":"sender: started","stream_id":"vnoboxna"}
+{"time":"2025-11-10T23:55:35.342007894-05:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-11-10T23:55:35.591627093-05:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2025-11-10T23:55:35.595985018-05:00","level":"INFO","msg":"stream: closing","id":"vnoboxna"}
+{"time":"2025-11-10T23:55:35.59599717-05:00","level":"INFO","msg":"handler: closed","stream_id":"vnoboxna"}
+{"time":"2025-11-10T23:55:35.598067847-05:00","level":"INFO","msg":"sender: closed","stream_id":"vnoboxna"}
+{"time":"2025-11-10T23:55:35.59807333-05:00","level":"INFO","msg":"stream: closed","id":"vnoboxna"}

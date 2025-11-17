@@ -1,0 +1,13 @@
+
+Starting training for 3000 iterations...
+Training: 100%|██████████| 3000/3000 [11:14<00:00,  4.45it/s]
+Iteration 300/3000: Loss=0.050264, MSE=0.050247, Pen=0.000018
+Iteration 600/3000: Loss=0.023055, MSE=0.022634, Pen=0.000420
+Iteration 900/3000: Loss=0.016919, MSE=0.016422, Pen=0.000497
+Iteration 1200/3000: Loss=0.015884, MSE=0.015516, Pen=0.000368
+Iteration 1500/3000: Loss=0.015548, MSE=0.015185, Pen=0.000363
+Iteration 1800/3000: Loss=0.016311, MSE=0.015932, Pen=0.000379
+Iteration 2100/3000: Loss=0.014320, MSE=0.013944, Pen=0.000376
+Iteration 2400/3000: Loss=0.013446, MSE=0.013068, Pen=0.000378
+Iteration 2700/3000: Loss=0.012725, MSE=0.012386, Pen=0.000339
+Iteration 3000/3000: Loss=0.012607, MSE=0.012270, Pen=0.000337
