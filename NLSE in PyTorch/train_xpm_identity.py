@@ -176,11 +176,13 @@ def setup_training(config, device):
     #! TEST: Alternative loss function - HG coefficients
     # define y_hg - the target HG coefficients (simply identity tensor of size B x B)
     y_hg = torch.eye(B, dtype=torch.float32, device=device)
+    # Create a smaller HG basis with only B modes for the loss computation
+    hg_basis_B = get_hg_basis(B, t, tau)
+    
     def hg_loss_function(A_j_evolution, A_k_evolution):
         final_j = A_j_evolution[:, :, -1] # shape: (B, Nt)
-        final_j_hg = time_to_hg(final_j, hg_basis, dt) # shape: (B, N_modes)
-        # cutoff the HG coefficients to only keep the first B modes
-        final_j_hg = final_j_hg[:, :B] # shape: (B - batches, B - modes)
+        # Compute HG coefficients for each signal in the batch
+        final_j_hg = torch.stack([time_to_hg(final_j[i], hg_basis_B, dt) for i in range(B)]) # shape: (B, B)
         # calculate the MSE loss between the final HG coefficients and the target HG coefficients
         mse_loss = F.mse_loss(final_j_hg, y_hg)
         
@@ -196,9 +198,8 @@ def setup_training(config, device):
     #! TEST: Alternative loss function - HG coefficients normalized
     def normalized_hg_loss_function(A_j_evolution, A_k_evolution):
         final_j = A_j_evolution[:, :, -1] # shape: (B, Nt)
-        final_j_hg = time_to_hg(final_j, hg_basis, dt) # shape: (B, N_modes)
-        # cutoff the HG coefficients to only keep the first B modes
-        final_j_hg = final_j_hg[:, :B] # shape: (B - batches, B - modes)
+        # Compute HG coefficients for each signal in the batch
+        final_j_hg = torch.stack([time_to_hg(final_j[i], hg_basis_B, dt) for i in range(B)]) # shape: (B, B)
         # Add epsilon for numerical stability during normalization
         eps = 1e-8
         final_j_hg_normalized = final_j_hg / (torch.norm(final_j_hg, dim=1, keepdim=True) + eps)
