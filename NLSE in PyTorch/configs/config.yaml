@@ -28,7 +28,8 @@ training:
   w_mse: 1e4             # MSE loss weight
   w_pen: 1e3             # Penalty loss weight
   lr: 5e-2               # Learning rate
-  N_train: 10000            # Number of training iterations
+  N_train: 10000         # Number of training iterations
+  loss_fn: basic         # Loss function: basic, hg, or normalized_hg
 
 # Plotting Parameters
 plotting:

@@ -544,15 +544,27 @@ def main():
                         help='Custom run directory (default: auto-generated)')
     parser.add_argument('--no-wandb', action='store_true',
                         help='Disable wandb logging')
-    parser.add_argument('--loss-fn', type=str, default='basic',
+    parser.add_argument('--loss-fn', type=str, default=None,
                         choices=['basic', 'hg', 'normalized_hg'],
-                        help='Loss function to use: basic (default), hg, or normalized_hg')
+                        help='Loss function to use: basic, hg, or normalized_hg (overrides config file)')
     
     args = parser.parse_args()
     
     # Load configuration
     print(f"Loading configuration from {args.config}...")
     config = load_config(args.config)
+    
+    # Determine loss function: command-line arg overrides config file
+    if args.loss_fn is not None:
+        loss_fn = args.loss_fn
+        print(f"Loss function set via command-line: {loss_fn}")
+    else:
+        # Get from config file, default to 'basic' if not specified
+        loss_fn = config.get('training', {}).get('loss_fn', 'basic')
+        if loss_fn not in ['basic', 'hg', 'normalized_hg']:
+            print(f"Warning: Invalid loss_fn '{loss_fn}' in config file. Using 'basic' instead.")
+            loss_fn = 'basic'
+        print(f"Loss function from config file: {loss_fn}")
     
     # Setup device
     device = setup_device(config)
@@ -568,6 +580,11 @@ def main():
     
     print(f"\nRun directory: {run_dir}")
     
+    # Update config with the actual loss function being used
+    if 'training' not in config:
+        config['training'] = {}
+    config['training']['loss_fn'] = loss_fn
+    
     # Save configuration to run directory
     config_path = save_config_to_run_dir(config, run_dir)
     print(f"Configuration saved to {config_path}")
@@ -581,7 +598,7 @@ def main():
     A_j_evolution, A_k_evolution, losses, best_iteration, best_loss = train_loop(
         config, training_setup, device, run_dir, 
         use_wandb=not args.no_wandb,
-        loss_fn_name=args.loss_fn
+        loss_fn_name=loss_fn
     )
     
     # Save plots
