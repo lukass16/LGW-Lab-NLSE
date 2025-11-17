@@ -154,7 +154,7 @@ def plot_input_pulse(theta, setup, run_dir, show_plot=False):
         # Save plot to plots folder in run directory
         plots_dir = Path(run_dir) / "plots"
         plots_dir.mkdir(exist_ok=True)
-        output_path = plots_dir / "input_pulse.png"
+        output_path = plots_dir / "solution_pulse.png"
         plt.savefig(output_path, dpi=150, bbox_inches='tight')
         print(f"Input pulse plot saved to {output_path}")
         plt.close()
