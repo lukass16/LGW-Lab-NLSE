@@ -175,7 +175,7 @@ def setup_training(config, device):
     
     #! TEST: Alternative loss function - HG coefficients
     # define y_hg - the target HG coefficients (simply identity tensor of size B x B)
-    y_hg = torch.eye(B, dtype=torch.float32, device=device)
+    y_hg = torch.eye(B, dtype=torch.float32, device=device) * amplitude_downscale
     # Create a smaller HG basis with only B modes for the loss computation
     hg_basis_B = get_hg_basis(B, t, tau)
     
@@ -199,7 +199,7 @@ def setup_training(config, device):
     def normalized_hg_loss_function(A_j_evolution, A_k_evolution):
         final_j = A_j_evolution[:, :, -1] # shape: (B, Nt)
         # Compute HG coefficients for each signal in the batch
-        final_j_hg = torch.stack([time_to_hg(final_j[i], hg_basis_B, dt) for i in range(B)]) # shape: (B, B)
+        final_j_hg = torch.stack([time_to_hg(final_j[i], hg_basis_B, dt) for i in range(B)]) * amplitude_downscale # shape: (B, B)
         # Add epsilon for numerical stability during normalization
         eps = 1e-10
         final_j_hg_normalized = final_j_hg / (torch.norm(final_j_hg, dim=1, keepdim=True) + eps)

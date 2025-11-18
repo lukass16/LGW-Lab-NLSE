@@ -1,0 +1,17 @@
+
+Starting training for 10000 iterations...
+Training:   0%|          | 0/10000 [00:00<?, ?it/s]/vast/palmer/home.grace/lrk42/LGW Lab/unitary/LGW-Lab-NLSE/NLSE in PyTorch/nlse.py:392: UserWarning: Casting complex values to real discards the imaginary part (Triggered internally at /opt/conda/conda-bld/pytorch_1729647348947/work/aten/src/ATen/native/Copy.cpp:308.)
+  return coefficients.float()
+Training: 100%|██████████| 10000/10000 [1:12:40<00:00,  2.29it/s]
+Iteration 1000/10000: Loss=0.070609, MSE=0.070609, Pen=0.000000, Best=0.070609 (iter 1000)
+Iteration 2000/10000: Loss=0.070607, MSE=0.070607, Pen=0.000000, Best=0.070607 (iter 1996)
+Iteration 3000/10000: Loss=0.070606, MSE=0.070606, Pen=0.000000, Best=0.070606 (iter 2989)
+Iteration 4000/10000: Loss=0.070606, MSE=0.070606, Pen=0.000000, Best=0.070606 (iter 3966)
+Iteration 5000/10000: Loss=0.070606, MSE=0.070606, Pen=0.000000, Best=0.070606 (iter 4888)
+Iteration 6000/10000: Loss=0.070606, MSE=0.070606, Pen=0.000000, Best=0.070606 (iter 5968)
+Iteration 7000/10000: Loss=0.070606, MSE=0.070606, Pen=0.000000, Best=0.070606 (iter 6432)
+Iteration 8000/10000: Loss=0.070606, MSE=0.070606, Pen=0.000000, Best=0.070606 (iter 7219)
+Iteration 9000/10000: Loss=0.070606, MSE=0.070606, Pen=0.000000, Best=0.070606 (iter 7219)
+Iteration 10000/10000: Loss=0.070606, MSE=0.070606, Pen=0.000000, Best=0.070606 (iter 7219)
+
+Restoring best model from iteration 7219 (loss=0.070606)
