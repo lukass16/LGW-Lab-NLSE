@@ -1,0 +1,6 @@
+
+Starting training for 10000 iterations...
+Training:   0%|          | 0/10000 [00:00<?, ?it/s]/vast/palmer/home.grace/lrk42/LGW Lab/unitary/LGW-Lab-NLSE/NLSE in PyTorch/nlse.py:392: UserWarning: Casting complex values to real discards the imaginary part (Triggered internally at /opt/conda/conda-bld/pytorch_1729647348947/work/aten/src/ATen/native/Copy.cpp:308.)
+  return coefficients.float()
+Training:  16%|█▌        | 1592/10000 [11:13<1:00:37,  2.31it/s]
+Iteration 1000/10000: Loss=601.620972, MSE=601.620544, Pen=0.000422, Best=601.620972 (iter 1000)

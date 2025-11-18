@@ -1,0 +1,19 @@
+
+Starting training for 10000 iterations...
+Training:   0%|          | 0/10000 [00:00<?, ?it/s]
+Traceback (most recent call last):
+  File "/vast/palmer/home.grace/lrk42/LGW Lab/unitary/LGW-Lab-NLSE/NLSE in PyTorch/train_xpm_identity.py", line 619, in <module>
+    main()
+  File "/vast/palmer/home.grace/lrk42/LGW Lab/unitary/LGW-Lab-NLSE/NLSE in PyTorch/train_xpm_identity.py", line 598, in main
+    A_j_evolution, A_k_evolution, losses, best_iteration, best_loss = train_loop(
+                                                                      ^^^^^^^^^^^
+  File "/vast/palmer/home.grace/lrk42/LGW Lab/unitary/LGW-Lab-NLSE/NLSE in PyTorch/train_xpm_identity.py", line 306, in train_loop
+    loss_mse, loss_pen = loss_function(A_j_evolution, A_k_evolution)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/vast/palmer/home.grace/lrk42/LGW Lab/unitary/LGW-Lab-NLSE/NLSE in PyTorch/train_xpm_identity.py", line 181, in hg_loss_function
+    final_j_hg = time_to_hg(final_j, hg_basis, dt) # shape: (B, N_modes)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/vast/palmer/home.grace/lrk42/LGW Lab/unitary/LGW-Lab-NLSE/NLSE in PyTorch/nlse.py", line 390, in time_to_hg
+    integrand = hg_basis * A[None, :]  # Broadcast A to match hg_basis shape
+                ~~~~~~~~~^~~~~~~~~~~~
+RuntimeError: The size of tensor a (500) must match the size of tensor b (16) at non-singleton dimension 1
