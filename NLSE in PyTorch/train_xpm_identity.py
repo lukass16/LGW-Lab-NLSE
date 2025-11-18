@@ -201,7 +201,7 @@ def setup_training(config, device):
         # Compute HG coefficients for each signal in the batch
         final_j_hg = torch.stack([time_to_hg(final_j[i], hg_basis_B, dt) for i in range(B)]) # shape: (B, B)
         # Add epsilon for numerical stability during normalization
-        eps = 1e-8
+        eps = 1e-10
         final_j_hg_normalized = final_j_hg / (torch.norm(final_j_hg, dim=1, keepdim=True) + eps)
         # calculate the MSE loss between the final HG coefficients and the target HG coefficients
         mse_loss = F.mse_loss(final_j_hg_normalized, y_hg)
