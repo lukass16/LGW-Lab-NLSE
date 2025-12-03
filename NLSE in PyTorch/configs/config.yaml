@@ -30,6 +30,7 @@ training:
   lr: 5e-2               # Learning rate
   N_train: 10000         # Number of training iterations
   loss_fn: normalized_hg         # Loss function: basic, hg, or normalized_hg
+  transformation: identity         # Transformation: identity, permutation, rotation, or arbitrary
 
 # Plotting Parameters
 plotting:

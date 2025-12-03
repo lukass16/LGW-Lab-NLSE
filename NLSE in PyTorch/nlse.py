@@ -389,7 +389,7 @@ def time_to_hg(A, hg_basis, dt):
     # Shape: (N_modes,) = (N_modes, len(t)) @ (len(t),)
     integrand = hg_basis * A[None, :]  # Broadcast A to match hg_basis shape
     coefficients = torch.trapz(integrand, dx=dt, dim=1)
-    return coefficients.float()
+    return coefficients.to(torch.cfloat)
 
 def hg_to_time(coefficients, hg_basis):
     # Matrix-vector multiplication: coefficients^T @ hg_basis

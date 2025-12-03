@@ -1,12 +1,18 @@
 """
-XPM Identity Operator Training Script
+XPM Unitary Operator Training Script
 
-This script trains an XPM identity operator using the Hermite-Gauss basis.
-It can be run as a batch job and includes wandb logging, parameter saving,
-and plot generation.
+This script trains an XPM operator to implement arbitrary unitary transformations
+using the Hermite-Gauss basis. It can be run as a batch job and includes wandb 
+logging, parameter saving, and plot generation.
+
+Supported transformations:
+    - identity: Identity transformation (y = x)
+    - permutation: Random permutation of modes
+    - rotation: Block-diagonal 2x2 rotations
+    - arbitrary: Arbitrary unitary from random Hermitian matrix
 
 Usage:
-    python train_xpm_identity.py [--config config.yaml] [--run-dir runs/run_001]
+    python train_xpm_identity.py [--config config.yaml] [--run-dir runs/run_001] [--transformation identity]
 """
 
 import argparse
@@ -87,6 +93,92 @@ def save_config_to_run_dir(config, run_dir):
     return config_path
 
 
+VALID_TRANSFORMATIONS = ['identity', 'permutation', 'rotation', 'arbitrary']
+
+
+def generate_transformation(transformation_name, num_modes, device, seed=27):
+    """
+    Generate a unitary transformation matrix.
+    
+    Args:
+        transformation_name: One of 'identity', 'permutation', 'rotation', 'arbitrary'
+        num_modes: Number of modes (size of the transformation matrix)
+        device: Torch device
+        seed: Random seed for reproducibility (default: 27)
+    
+    Returns:
+        U: Unitary transformation matrix of shape (num_modes, num_modes), complex dtype
+    """
+    # Set seed for reproducibility
+    torch.manual_seed(seed)
+    
+    if transformation_name == 'identity':
+        U = torch.eye(num_modes, dtype=torch.cfloat, device=device)
+    
+    elif transformation_name == 'permutation':
+        # Generate a random permutation of the columns of an identity matrix
+        idx = torch.randperm(num_modes, device=device)
+        U = torch.eye(num_modes, dtype=torch.cfloat, device=device)[:, idx]
+    
+    elif transformation_name == 'rotation':
+        # Block-diagonal 2x2 rotations
+        theta = torch.rand(1, device=device) * 2 * torch.pi  # random angle in [0, 2pi)
+        cos_theta = torch.cos(theta)
+        sin_theta = torch.sin(theta)
+        
+        rotation_2x2 = torch.zeros((2, 2), dtype=torch.float32, device=device)
+        rotation_2x2[0, 0] = cos_theta
+        rotation_2x2[0, 1] = -sin_theta
+        rotation_2x2[1, 0] = sin_theta
+        rotation_2x2[1, 1] = cos_theta
+        
+        # Create block-diagonal matrix with 2x2 rotation repeated along diagonal
+        U = torch.zeros((num_modes, num_modes), dtype=torch.cfloat, device=device)
+        num_blocks = num_modes // 2
+        for block_idx in range(num_blocks):
+            start = block_idx * 2
+            U[start:start+2, start:start+2] = rotation_2x2.to(torch.cfloat)
+        # Handle odd number of modes - last mode maps to itself
+        if num_modes % 2 == 1:
+            U[-1, -1] = 1.0
+    
+    elif transformation_name == 'arbitrary':
+        # Arbitrary unitary from exponentiated Hermitian matrix
+        H = torch.zeros((num_modes, num_modes), dtype=torch.cfloat, device=device)
+        
+        # Diagonal entries must be real
+        diag_real = torch.randn(num_modes, device=device).to(torch.cfloat)
+        H[torch.arange(num_modes), torch.arange(num_modes)] = diag_real
+        
+        # Off-diagonal entries: h_ij = conj(h_ji)
+        for i in range(num_modes):
+            for j in range(i+1, num_modes):
+                re = torch.randn(1, device=device)
+                im = torch.randn(1, device=device)
+                val = re + 1j * im
+                H[i, j] = val
+                H[j, i] = val.conj()
+        
+        # Exponentiate to get unitary
+        U = torch.matrix_exp(1j * H)
+    
+    else:
+        raise ValueError(f"Unknown transformation: {transformation_name}. "
+                        f"Valid options: {VALID_TRANSFORMATIONS}")
+    
+    return U
+
+
+def is_unitary(matrix, atol=1e-5):
+    """Check if a matrix is unitary within tolerance."""
+    identity = torch.eye(matrix.shape[0], dtype=matrix.dtype, device=matrix.device)
+    if torch.is_complex(matrix):
+        prod = matrix @ matrix.conj().T
+    else:
+        prod = matrix @ matrix.T
+    return torch.allclose(prod, identity, atol=atol)
+
+
 """--------------------------------- Training Setup Functions ---------------------------------"""
 
 def strong_soliton(t, beta2_k, gamma_k, tau):
@@ -100,8 +192,14 @@ def strong_soliton(t, beta2_k, gamma_k, tau):
     return Ain_k
 
 
-def setup_training(config, device):
-    """Setup training data, model, and optimizer."""
+def setup_training(config, device, transformation_name='identity'):
+    """Setup training data, model, and optimizer.
+    
+    Args:
+        config: Configuration dictionary
+        device: Torch device
+        transformation_name: Name of the transformation to train ('identity', 'permutation', 'rotation', 'arbitrary')
+    """
     # Extract parameters from dictionaries
     sim = config['simulation']
     med = config['medium']
@@ -133,6 +231,9 @@ def setup_training(config, device):
     w_pen = float(train['w_pen'])
     lr = float(train['lr'])
     
+    # Get random seed for transformation (optional, defaults to 27)
+    transformation_seed = int(train.get('transformation_seed', 27))
+    
     # Calculate derived parameters
     dz = Lz / Nz
     dt = Lt / Nt
@@ -143,10 +244,21 @@ def setup_training(config, device):
     # Define HG basis
     hg_basis = get_hg_basis(N_modes, t, tau)
     
-    # Get batch of pulses
+    # Get batch of pulses (inputs are HG modes)
     B = batch_size
-    x = get_hg_basis(B, t, tau) * amplitude_downscale  # inputs
-    y = x.clone().detach()  # labels
+    x = hg_basis[:B, :] * amplitude_downscale  # inputs: shape (B, Nt)
+    
+    # Generate the target unitary transformation
+    U = generate_transformation(transformation_name, B, device, seed=transformation_seed)
+    print(f"Transformation '{transformation_name}' is unitary: {is_unitary(U)}")
+    
+    # Generate labels by applying transformation in HG coefficient space
+    x_hg = torch.eye(B, dtype=torch.cfloat, device=device) * amplitude_downscale  # shape: (B, B)
+    y_hg = U @ x_hg  # shape: (B, B) - target HG coefficients
+    
+    # Convert target HG coefficients back to time domain
+    hg_basis_B = hg_basis[:B, :]  # truncated basis for batch size
+    y = torch.stack([hg_to_time(y_hg[i], hg_basis_B) for i in range(B)])  # shape: (B, Nt)
     
     # Define input strong pulse
     A_strong = strong_soliton(t, beta2_k, gamma_k, tau)
@@ -160,9 +272,9 @@ def setup_training(config, device):
     mask = 1 - penalty
     iters = np.linspace(0, Nz-1, m).astype(int)
     
-    # Define loss function
+    # Define loss function (compares intensity profiles)
     def loss_function(A_j_evolution, A_k_evolution):
-        # MSE loss
+        # MSE loss on intensity (works for complex y)
         mse_loss = F.mse_loss(torch.abs(A_j_evolution[:, :, -1])**2, torch.abs(y)**2)
         
         pen_loss = 0.0
@@ -173,19 +285,15 @@ def setup_training(config, device):
         
         return w_mse * mse_loss, w_pen * pen_loss
     
-    #! TEST: Alternative loss function - HG coefficients
-    # define y_hg - the target HG coefficients (simply identity tensor of size B x B)
-    y_hg = torch.eye(B, dtype=torch.float32, device=device) * amplitude_downscale
-    # Create a smaller HG basis with only B modes for the loss computation
-    hg_basis_B = get_hg_basis(B, t, tau)
+    # Alternative loss function - HG coefficients
+    # y_hg is already defined above as U @ x_hg (the target HG coefficients)
     
     def hg_loss_function(A_j_evolution, A_k_evolution):
-        final_j = A_j_evolution[:, :, -1] # shape: (B, Nt)
+        final_j = A_j_evolution[:, :, -1]  # shape: (B, Nt)
         # Compute HG coefficients for each signal in the batch
-        final_j_hg = torch.stack([time_to_hg(final_j[i], hg_basis_B, dt) for i in range(B)]) # shape: (B, B)
-        # calculate the MSE loss between the final HG coefficients and the target HG coefficients
-        mse_loss = F.mse_loss(final_j_hg, y_hg)
-        
+        final_j_hg = torch.stack([time_to_hg(final_j[i], hg_basis_B, dt) for i in range(B)])  # shape: (B, B)
+        # MSE loss between HG coefficients (use abs for complex coefficients)
+        mse_loss = F.mse_loss(torch.abs(final_j_hg)**2, torch.abs(y_hg)**2)
         
         pen_loss = 0.0
         zeros = torch.zeros(B, Nt, dtype=torch.float32, device=device)
@@ -195,16 +303,18 @@ def setup_training(config, device):
             
         return w_mse * mse_loss, w_pen * pen_loss
     
-    #! TEST: Alternative loss function - HG coefficients normalized
+    # Alternative loss function - HG coefficients normalized
     def normalized_hg_loss_function(A_j_evolution, A_k_evolution):
-        final_j = A_j_evolution[:, :, -1] # shape: (B, Nt)
+        final_j = A_j_evolution[:, :, -1]  # shape: (B, Nt)
         # Compute HG coefficients for each signal in the batch
-        final_j_hg = torch.stack([time_to_hg(final_j[i], hg_basis_B, dt) for i in range(B)]) * amplitude_downscale # shape: (B, B)
+        final_j_hg = torch.stack([time_to_hg(final_j[i], hg_basis_B, dt) for i in range(B)])  # shape: (B, B)
         # Add epsilon for numerical stability during normalization
         eps = 1e-10
-        final_j_hg_normalized = final_j_hg / (torch.norm(final_j_hg, dim=1, keepdim=True) + eps)
-        # calculate the MSE loss between the final HG coefficients and the target HG coefficients
-        mse_loss = F.mse_loss(final_j_hg_normalized, y_hg)
+        final_j_hg_normalized = final_j_hg / (torch.norm(final_j_hg, dim=1, keepdim=True) + eps) * amplitude_downscale
+        # Normalize target as well for fair comparison
+        y_hg_normalized = y_hg / (torch.norm(y_hg, dim=1, keepdim=True) + eps) * amplitude_downscale
+        # MSE loss (use abs for complex coefficients)
+        mse_loss = F.mse_loss(torch.abs(final_j_hg_normalized), torch.abs(y_hg_normalized))
     
         pen_loss = 0.0
         zeros = torch.zeros(B, Nt, dtype=torch.float32, device=device)
@@ -228,12 +338,17 @@ def setup_training(config, device):
     optimizer = torch.optim.Adam([theta], lr=lr)
     
     print(f"Optimizing HG basis coefficient theta of size {theta.shape[0]}")
+    print(f"Training for transformation: {transformation_name}")
     
     return {
         't': t,
         'hg_basis': hg_basis,
+        'hg_basis_B': hg_basis_B,
         'x': x,
         'y': y,
+        'y_hg': y_hg,
+        'U': U,
+        'transformation_name': transformation_name,
         'theta': theta,
         'penalty': penalty,
         'mask': mask,
@@ -513,6 +628,9 @@ def save_model_parameters(training_setup, run_dir, best_iteration=None, best_los
     # *somewhat redundant, since the best model is already saved in the checkpoint, but it saves a clean additional numpy copy of the best theta
     """Save the trained model parameters (best model from training)."""
     theta = training_setup['theta']
+    U = training_setup['U']
+    transformation_name = training_setup['transformation_name']
+    
     params_dir = run_dir / "parameters"
     params_dir.mkdir(exist_ok=True)
     
@@ -520,9 +638,17 @@ def save_model_parameters(training_setup, run_dir, best_iteration=None, best_los
     theta_path = params_dir / "theta.npy"
     np.save(theta_path, theta.detach().cpu().numpy())
     
+    # Save transformation matrix as numpy array
+    U_path = params_dir / "transformation_matrix.npy"
+    np.save(U_path, U.detach().cpu().numpy())
+    
     # Save as PyTorch state dict
     state_dict_path = params_dir / "theta_state_dict.pt"
-    save_dict = {'theta': theta}
+    save_dict = {
+        'theta': theta,
+        'transformation_matrix': U,
+        'transformation_name': transformation_name,
+    }
     if best_iteration is not None:
         save_dict['best_iteration'] = best_iteration
     if best_loss is not None:
@@ -531,6 +657,7 @@ def save_model_parameters(training_setup, run_dir, best_iteration=None, best_los
     
     if best_iteration is not None and best_loss is not None:
         print(f"Best model parameters (iteration {best_iteration+1}, loss={best_loss:.6f}) saved to {params_dir}")
+        print(f"Transformation '{transformation_name}' matrix saved to {U_path}")
     else:
         print(f"Model parameters saved to {params_dir}")
 
@@ -538,7 +665,7 @@ def save_model_parameters(training_setup, run_dir, best_iteration=None, best_los
 """--------------------------------- Main Function ---------------------------------"""
 
 def main():
-    parser = argparse.ArgumentParser(description='Train XPM Identity Operator')
+    parser = argparse.ArgumentParser(description='Train XPM Unitary Operator')
     parser.add_argument('--config', type=str, default='configs/config.yaml',
                         help='Path to configuration YAML file')
     parser.add_argument('--run-dir', type=str, default=None,
@@ -548,6 +675,9 @@ def main():
     parser.add_argument('--loss-fn', type=str, default=None,
                         choices=['basic', 'hg', 'normalized_hg'],
                         help='Loss function to use: basic, hg, or normalized_hg (overrides config file)')
+    parser.add_argument('--transformation', type=str, default=None,
+                        choices=VALID_TRANSFORMATIONS,
+                        help=f'Transformation to train: {", ".join(VALID_TRANSFORMATIONS)} (overrides config file)')
     
     args = parser.parse_args()
     
@@ -567,6 +697,18 @@ def main():
             loss_fn = 'basic'
         print(f"Loss function from config file: {loss_fn}")
     
+    # Determine transformation: command-line arg overrides config file
+    if args.transformation is not None:
+        transformation = args.transformation
+        print(f"Transformation set via command-line: {transformation}")
+    else:
+        # Get from config file, default to 'identity' if not specified
+        transformation = config.get('training', {}).get('transformation', 'identity')
+        if transformation not in VALID_TRANSFORMATIONS:
+            print(f"Warning: Invalid transformation '{transformation}' in config file. Using 'identity' instead.")
+            transformation = 'identity'
+        print(f"Transformation from config file: {transformation}")
+    
     # Setup device
     device = setup_device(config)
     
@@ -581,10 +723,11 @@ def main():
     
     print(f"\nRun directory: {run_dir}")
     
-    # Update config with the actual loss function being used
+    # Update config with the actual loss function and transformation being used
     if 'training' not in config:
         config['training'] = {}
     config['training']['loss_fn'] = loss_fn
+    config['training']['transformation'] = transformation
     
     # Save configuration to run directory
     config_path = save_config_to_run_dir(config, run_dir)
@@ -592,7 +735,7 @@ def main():
     
     # Setup training
     print("\nSetting up training...")
-    training_setup = setup_training(config, device)
+    training_setup = setup_training(config, device, transformation_name=transformation)
     
     # Run training
     print("\nStarting training...")
