@@ -28,8 +28,14 @@ training:
   w_mse: 1.2e0             # MSE loss weight
   w_pen: 1e3             # Penalty loss weight
   lr: 5e-2               # Learning rate
+<<<<<<< HEAD
   N_train: 10000         # Number of training iterations
   loss_fn: normalized_hg         # Loss function: basic (1e4), hg (1.2e0), or normalized_hg (1.2e0)
+=======
+  N_train: 3         # Number of training iterations
+  loss_fn: normalized_hg         # Loss function: basic, hg, or normalized_hg
+  transformation: identity         # Transformation: identity, permutation, rotation, or arbitrary
+>>>>>>> 69521cdaa453330ddcc21c4334df79ae23d10929
 
 # Plotting Parameters
 plotting:
