@@ -286,8 +286,6 @@ def setup_training(config, device, transformation_name='identity'):
         return w_mse * mse_loss, w_pen * pen_loss
     
     # Alternative loss function - HG coefficients
-    # y_hg is already defined above as U @ x_hg (the target HG coefficients)
-    
     def hg_loss_function(A_j_evolution, A_k_evolution):
         final_j = A_j_evolution[:, :, -1]  # shape: (B, Nt)
         # Compute HG coefficients for each signal in the batch
