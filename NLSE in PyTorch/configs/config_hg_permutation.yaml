@@ -30,7 +30,7 @@ training:
   lr: 5e-2               # Learning rate
   N_train: 5000         # Number of training iterations
   loss_fn: hg         # Loss function: basic, hg, or normalized_hg
-  transformation: identity         # Transformation: identity, permutation, rotation, or arbitrary
+  transformation: permutation         # Transformation: identity, permutation, rotation, or arbitrary
 
 # Plotting Parameters
 plotting:
@@ -41,9 +41,9 @@ plotting:
 wandb:
   project: "xpm-identity-operator"
   entity: lgwlab           # Set to your wandb entity/username, or null for default
-  name: hg-identity           # Set to a specific run name, or null for auto-generated
+  name: hg-permutation           # Set to a specific run name, or null for auto-generated
   tags: []               # List of tags for this run
-  notes: "Initial training for using 16 Hermite-Gauss Modes"              # Notes about this run
+  notes: "Training with HG loss function and permutation transformation"              # Notes about this run
 
 # Device Configuration
 device:
