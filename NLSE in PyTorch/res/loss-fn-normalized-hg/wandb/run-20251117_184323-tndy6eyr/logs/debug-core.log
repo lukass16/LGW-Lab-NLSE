@@ -1,6 +1,1 @@
-{"time":"2025-11-17T18:43:23.956283269-05:00","level":"INFO","msg":"main: starting server","port-filename":"/tmp/tmp.rnd62sGOKY/tmpk4vvtjss/port-888955.txt","pid":888955,"log-level":0,"disable-analytics":false,"shutdown-on-parent-exit":false,"enable-dcgm-profiling":false}
-{"time":"2025-11-17T18:43:23.956872377-05:00","level":"INFO","msg":"server: accepting connections","addr":{"Name":"/tmp/tmp.rnd62sGOKY/wandb-888955-889012-3238685950/socket","Net":"unix"}}
-{"time":"2025-11-17T18:43:23.956956764-05:00","level":"INFO","msg":"server: will exit if parent process dies","ppid":888955}
-{"time":"2025-11-17T18:43:24.088149394-05:00","level":"INFO","msg":"connection: ManageConnectionData: new connection created","id":"1(@)"}
-{"time":"2025-11-17T18:43:24.132755903-05:00","level":"INFO","msg":"handleInformInit: received","streamId":"tndy6eyr","id":"1(@)"}
-{"time":"2025-11-17T18:43:24.395560115-05:00","level":"INFO","msg":"handleInformInit: stream started","streamId":"tndy6eyr","id":"1(@)"}
+/home/lrk42/.cache/wandb/logs/core-debug-20251117_184323.log

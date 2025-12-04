@@ -1,16 +1,1 @@
-{"time":"2025-11-17T19:43:23.386439164-05:00","level":"INFO","msg":"main: starting server","port-filename":"/tmp/tmp.rnd62sGOKY/tmpcjbpig34/port-685939.txt","pid":685939,"log-level":0,"disable-analytics":false,"shutdown-on-parent-exit":false,"enable-dcgm-profiling":false}
-{"time":"2025-11-17T19:43:23.386727212-05:00","level":"INFO","msg":"server: accepting connections","addr":{"Name":"/tmp/tmp.rnd62sGOKY/wandb-685939-685964-649410159/socket","Net":"unix"}}
-{"time":"2025-11-17T19:43:23.386804205-05:00","level":"INFO","msg":"server: will exit if parent process dies","ppid":685939}
-{"time":"2025-11-17T19:43:23.4964428-05:00","level":"INFO","msg":"connection: ManageConnectionData: new connection created","id":"1(@)"}
-{"time":"2025-11-17T19:43:23.587190228-05:00","level":"INFO","msg":"handleInformInit: received","streamId":"rwvqfch0","id":"1(@)"}
-{"time":"2025-11-17T19:43:23.935021436-05:00","level":"INFO","msg":"handleInformInit: stream started","streamId":"rwvqfch0","id":"1(@)"}
-{"time":"2025-11-17T20:56:05.930902091-05:00","level":"INFO","msg":"handleInformFinish: finish message received","streamId":"rwvqfch0","id":"1(@)"}
-{"time":"2025-11-17T20:56:05.962059154-05:00","level":"INFO","msg":"handleInformFinish: stream closed","streamId":"rwvqfch0","id":"1(@)"}
-{"time":"2025-11-17T20:56:09.534980042-05:00","level":"INFO","msg":"handleInformTeardown: server teardown initiated","id":"1(@)"}
-{"time":"2025-11-17T20:56:09.534997976-05:00","level":"INFO","msg":"handleInformTeardown: server shutdown complete","id":"1(@)"}
-{"time":"2025-11-17T20:56:09.535004063-05:00","level":"INFO","msg":"connection: closing","id":"1(@)"}
-{"time":"2025-11-17T20:56:09.535033074-05:00","level":"INFO","msg":"connection: closed successfully","id":"1(@)"}
-{"time":"2025-11-17T20:56:09.535035616-05:00","level":"INFO","msg":"connection: ManageConnectionData: connection closed","id":"1(@)"}
-{"time":"2025-11-17T20:56:09.535039557-05:00","level":"INFO","msg":"server is shutting down"}
-{"time":"2025-11-17T20:56:09.535098009-05:00","level":"INFO","msg":"server: listener closed","addr":{"Name":"/tmp/tmp.rnd62sGOKY/wandb-685939-685964-649410159/socket","Net":"unix"}}
-{"time":"2025-11-17T20:56:09.535114901-05:00","level":"INFO","msg":"server is closed"}
+/home/lrk42/.cache/wandb/logs/core-debug-20251117_194323.log
