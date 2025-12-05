@@ -1,0 +1,15 @@
+
+Starting training for 5000 iterations...
+Training: 100%|██████████| 5000/5000 [41:58<00:00,  1.99it/s]
+Iteration 500/5000: Loss=0.002321, MSE=0.002321, Pen=0.000000, Best=0.002321 (iter 500)
+Iteration 1000/5000: Loss=0.001957, MSE=0.001957, Pen=0.000000, Best=0.001957 (iter 1000)
+Iteration 1500/5000: Loss=0.001826, MSE=0.001826, Pen=0.000000, Best=0.001826 (iter 1500)
+Iteration 2000/5000: Loss=0.001564, MSE=0.001564, Pen=0.000000, Best=0.001564 (iter 2000)
+Iteration 2500/5000: Loss=0.001547, MSE=0.001547, Pen=0.000000, Best=0.001547 (iter 2500)
+Iteration 3000/5000: Loss=0.001542, MSE=0.001542, Pen=0.000000, Best=0.001542 (iter 3000)
+Iteration 3500/5000: Loss=0.001537, MSE=0.001537, Pen=0.000000, Best=0.001537 (iter 3500)
+Iteration 4000/5000: Loss=0.001532, MSE=0.001532, Pen=0.000000, Best=0.001532 (iter 4000)
+Iteration 4500/5000: Loss=0.001528, MSE=0.001528, Pen=0.000000, Best=0.001528 (iter 4500)
+Iteration 5000/5000: Loss=0.001525, MSE=0.001525, Pen=0.000000, Best=0.001525 (iter 5000)
+
+Restoring best model from iteration 5000 (loss=0.001525)

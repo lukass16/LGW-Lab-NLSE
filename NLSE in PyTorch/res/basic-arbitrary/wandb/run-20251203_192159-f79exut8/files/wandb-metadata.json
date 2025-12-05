@@ -1,0 +1,85 @@
+{
+  "os": "Linux-4.18.0-553.52.1.el8_10.x86_64-x86_64-with-glibc2.28",
+  "python": "CPython 3.11.14",
+  "startedAt": "2025-12-04T00:21:59.216205Z",
+  "args": [
+    "--config",
+    "configs/config_basic_arbitrary.yaml"
+  ],
+  "program": "/vast/palmer/home.grace/lrk42/LGW Lab/unitary/LGW-Lab-NLSE/NLSE in PyTorch/train_xpm_identity.py",
+  "codePath": "train_xpm_identity.py",
+  "codePathLocal": "train_xpm_identity.py",
+  "email": "lukasskellijs@gmail.com",
+  "root": "runs/basic-arbitrary",
+  "host": "r805u34n01.grace.ycrc.yale.edu",
+  "executable": "/home/lrk42/.conda/envs/torch-gpu/bin/python",
+  "cpu_count": 36,
+  "cpu_count_logical": 36,
+  "gpu": "Tesla V100-SXM2-32GB",
+  "gpu_count": 1,
+  "disk": {
+    "/": {
+      "total": "202176655360",
+      "used": "15646720"
+    }
+  },
+  "memory": {
+    "total": "404353310720"
+  },
+  "gpu_nvidia": [
+    {
+      "name": "Tesla V100-SXM2-32GB",
+      "memoryTotal": "34359738368",
+      "cudaCores": 5120,
+      "architecture": "Volta",
+      "uuid": "GPU-8a7b5720-40be-0216-bf1f-8bb5f4a8b5d9"
+    }
+  ],
+  "cudaVersion": "12.8",
+  "slurm": {
+    "cluster_name": "grace",
+    "conf": "/var/lib/slurmconf/slurm.conf",
+    "cpus_on_node": "2",
+    "cpus_per_task": "2",
+    "export_env": "NONE",
+    "get_user_env": "1",
+    "gpus": "1",
+    "gpus_on_node": "1",
+    "gtids": "0",
+    "hint": "nomultithread",
+    "job_account": "wright",
+    "job_cpus_per_node": "2",
+    "job_end_time": "1764818499",
+    "job_gid": "11575",
+    "job_gpus": "2",
+    "job_id": "49066817",
+    "job_name": "xpm_train_gpu",
+    "job_nodelist": "r805u34n01",
+    "job_num_nodes": "1",
+    "job_partition": "gpu",
+    "job_qos": "normal",
+    "job_start_time": "1764807699",
+    "job_uid": "26647",
+    "job_user": "lrk42",
+    "jobid": "49066817",
+    "localid": "0",
+    "mem_per_cpu": "5120",
+    "nnodes": "1",
+    "nodeid": "0",
+    "nodelist": "r805u34n01",
+    "nprocs": "1",
+    "ntasks": "1",
+    "oom_kill_step": "0",
+    "prio_process": "0",
+    "procid": "0",
+    "submit_dir": "/vast/palmer/home.grace/lrk42/LGW Lab/unitary/LGW-Lab-NLSE/NLSE in PyTorch",
+    "submit_host": "r904u10n02.grace.ycrc.yale.edu",
+    "task_pid": "3097782",
+    "tasks_per_node": "1",
+    "threads_per_core": "1",
+    "topology_addr": "hdrspine.r805u19.r805u34n01",
+    "topology_addr_pattern": "switch.switch.node",
+    "tres_per_task": "cpu=2"
+  },
+  "writerId": "no5uy0oloxfsbbygq0yx25gvfdy6a0bq"
+}
