@@ -21,7 +21,7 @@ training:
   lr: 5e-2
   N_train: 5000
   loss_fn: hg
-  transformation: arbitrary
+  transformation: identity
 plotting:
   plot_percent: 0.3
   mode_nr: 7
@@ -30,7 +30,7 @@ wandb:
   entity: lgwlab
   name: hg-identity
   tags: []
-  notes: ''
+  notes: Training with basic loss function and identity transformation
 device:
   use_cuda: true
   device_id: 0

@@ -18,7 +18,7 @@ training:
   m: 8
   w_mse: 1e4
   w_pen: 1e3
-  lr: 5e-2
+  lr: 0.1
   N_train: 5000
   loss_fn: basic
   transformation: identity

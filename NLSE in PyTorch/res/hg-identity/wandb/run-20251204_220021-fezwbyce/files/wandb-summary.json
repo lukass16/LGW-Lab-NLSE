@@ -1,0 +1,1 @@
+{"loss_pen":5.695665663552063e-07,"_timestamp":1.7649058116379304e+09,"final_loss":0.005806867033243179,"best_loss":0.005806867033243179,"_step":5000,"loss_mse":0.005806297529488802,"best_iteration":4999,"_runtime":2189,"loss":0.005806867033243179,"final_loss_mse":0.005806297529488802,"iteration":4999,"final_loss_pen":5.695665663552063e-07,"_wandb":{"runtime":2189}}

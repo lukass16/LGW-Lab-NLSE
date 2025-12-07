@@ -2,10 +2,10 @@ _wandb:
     value:
         cli_version: 0.22.3
         e:
-            eks94jqli47e4cvcxi85v4cv8enlrqq2:
+            yzpb8x4u3d7ytcy7w1fwmsozyl5bsf5r:
                 args:
                     - --config
-                    - configs/config.yaml
+                    - configs/config_basic_identity.yaml
                 codePath: train_xpm_identity.py
                 codePathLocal: train_xpm_identity.py
                 cpu_count: 32
@@ -13,7 +13,7 @@ _wandb:
                 cudaVersion: "12.8"
                 disk:
                     /:
-                        total: "135072837632"
+                        total: "135072681984"
                         used: "15962112"
                 email: lukasskellijs@gmail.com
                 executable: /home/lrk42/.conda/envs/torch-gpu/bin/python
@@ -24,14 +24,14 @@ _wandb:
                       cudaCores: 8192
                       memoryTotal: "25757220864"
                       name: NVIDIA RTX A5000
-                      uuid: GPU-bdbeb03f-bf50-8579-770e-c67b6f7cdf44
-                host: r4513u32n01.grace.ycrc.yale.edu
+                      uuid: GPU-1b4a9856-73bc-3946-5699-22599b756817
+                host: r903u40n01.grace.ycrc.yale.edu
                 memory:
-                    total: "270145679360"
+                    total: "270145368064"
                 os: Linux-4.18.0-553.52.1.el8_10.x86_64-x86_64-with-glibc2.28
                 program: /vast/palmer/home.grace/lrk42/LGW Lab/unitary/LGW-Lab-NLSE/NLSE in PyTorch/train_xpm_identity.py
                 python: CPython 3.11.14
-                root: runs/hg-identity
+                root: runs/basic-identity
                 slurm:
                     cluster_name: grace
                     conf: /var/lib/slurmconf/slurm.conf
@@ -45,39 +45,39 @@ _wandb:
                     hint: nomultithread
                     job_account: wright
                     job_cpus_per_node: "2"
-                    job_end_time: "1764816262"
+                    job_end_time: "1764914483"
                     job_gid: "11575"
-                    job_gpus: "3"
-                    job_id: "49065983"
+                    job_gpus: "2"
+                    job_id: "49124498"
                     job_name: xpm_train_gpu
-                    job_nodelist: r4513u32n01
+                    job_nodelist: r903u40n01
                     job_num_nodes: "1"
                     job_partition: gpu
                     job_qos: normal
-                    job_start_time: "1764805462"
+                    job_start_time: "1764903683"
                     job_uid: "26647"
                     job_user: lrk42
-                    jobid: "49065983"
+                    jobid: "49124498"
                     localid: "0"
                     mem_per_cpu: "5120"
                     nnodes: "1"
                     nodeid: "0"
-                    nodelist: r4513u32n01
+                    nodelist: r903u40n01
                     nprocs: "1"
                     ntasks: "1"
                     oom_kill_step: "0"
                     prio_process: "0"
                     procid: "0"
                     submit_dir: /vast/palmer/home.grace/lrk42/LGW Lab/unitary/LGW-Lab-NLSE/NLSE in PyTorch
-                    submit_host: r904u10n02.grace.ycrc.yale.edu
-                    task_pid: "3889372"
+                    submit_host: r904u04n02.grace.ycrc.yale.edu
+                    task_pid: "2820776"
                     tasks_per_node: "1"
                     threads_per_core: "1"
-                    topology_addr: hdrspine.r807u19.r4513u32n01
+                    topology_addr: hdrspine.r903u19.r903u40n01
                     topology_addr_pattern: switch.switch.node
                     tres_per_task: cpu=2
-                startedAt: "2025-12-03T23:44:59.386205Z"
-                writerId: eks94jqli47e4cvcxi85v4cv8enlrqq2
+                startedAt: "2025-12-05T03:01:48.357960Z"
+                writerId: yzpb8x4u3d7ytcy7w1fwmsozyl5bsf5r
         m: []
         python_version: 3.11.14
         t:
@@ -123,17 +123,17 @@ training:
         N_train: 5000
         amplitude_downscale: "1e-1"
         batch_size: 16
-        loss_fn: hg
-        lr: "5e-2"
+        loss_fn: basic
+        lr: 0.1
         m: 8
         mask_percent: 0.8
-        transformation: arbitrary
+        transformation: identity
         w_mse: "1e4"
         w_pen: "1e3"
 wandb:
     value:
         entity: lgwlab
-        name: hg-identity
-        notes: ""
+        name: basic-identity
+        notes: Training with basic loss function and identity transformation
         project: xpm-identity-operator
         tags: []
