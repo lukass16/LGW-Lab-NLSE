@@ -8,6 +8,7 @@ import math
 
 # Torch imports
 import torch
+import torch.nn.functional as F
 
 # Device management - automatically use GPU if available
 # Wrap in try-except to prevent kernel crashes if CUDA is misconfigured
@@ -444,3 +445,50 @@ def analyze_pulse_in_hg_basis(pulse, hg_basis, t, pulse_name="Pulse"):
     print(f"Number of significant coefficients (>1% of max): {torch.sum(torch.abs(hg_coefficients) > 0.01 * torch.max(torch.abs(hg_coefficients)))}")
     
     return error
+
+def time_to_trunc_hg(A, hg_basis, dt, num_modes):
+    # takes as input a batch of pulses (B, Nt) and returns the HG coefficients (B, B) in the truncated basis
+    if A.ndim == 1: # deal with unbatched input
+        return time_to_hg(A, hg_basis[:num_modes, :], dt)
+    else:
+        B = A.shape[0]
+        return torch.stack([time_to_hg(A[i], hg_basis[:num_modes, :], dt) for i in range(B)])  # shape: (B, B)
+
+def analyze(output, target, hg_basis, dt, num_modes, Lt, Nt, label1="Target", label2="Output"): # analyze the output and target pulse in the HG and Time domains
+    # takes an unbatched output [Nt] and a target [Nt]
+    fig, axs = plt.subplots(1, 2, figsize=(12, 4))
+
+    # 1. Intensity plot (plot only the middle 0.2 percent)
+    intensity_output = output.abs()**2
+    intensity_target = target.abs()**2
+    t_plot = np.linspace(-Lt/2, Lt/2, Nt)
+    mse_time = F.mse_loss(intensity_output, intensity_target).item()
+    percent = 0.2  # 0.2 percent as fraction
+    Nt_middle = int(Nt * percent)
+    left_idx = (Nt - Nt_middle) // 2
+    right_idx = left_idx + Nt_middle
+    axs[0].plot(t_plot[left_idx:right_idx], intensity_target[left_idx:right_idx], label=f'{label1} |A|^2', color = 'r')
+    axs[0].plot(t_plot[left_idx:right_idx], intensity_output[left_idx:right_idx], label=f'{label2} |A|^2', linestyle='--', color = 'b')
+    axs[0].set_xlabel("Time")
+    axs[0].set_ylabel("Intensity")
+    axs[0].set_title(f"Pulse Intensity (MSE={mse_time:.3e})")
+    axs[0].legend()
+    axs[0].grid(True)
+
+    # 2. HG Coefficient plot (now as a stem plot)
+    coeff_output = time_to_trunc_hg(output, hg_basis, dt, num_modes).numpy()
+    coeff_target = time_to_trunc_hg(target, hg_basis, dt, num_modes).numpy()
+    coeff_output_int = np.abs(coeff_output)**2
+    coeff_target_int = np.abs(coeff_target)**2
+    mse_hg = np.mean(coeff_output_int - coeff_target_int)
+    mode_indices = np.arange(num_modes)
+    axs[1].stem(mode_indices, coeff_target_int, label=f'{label1} HG Coeff.', basefmt=' ', linefmt='r-', markerfmt='ro')
+    axs[1].stem(mode_indices, coeff_output_int, label=f'{label2} HG Coeff.', basefmt=' ', linefmt='b-', markerfmt='bo')
+    axs[1].set_xlabel("Truncated HG Mode n")
+    axs[1].set_ylabel("Coeff Amplitude")
+    axs[1].set_title(f"Truncated HG Coefficient \"Intensity\" (MSE={mse_hg:.3e})")
+    axs[1].legend()
+    axs[1].grid(True)
+
+    plt.tight_layout()
+    plt.show()
