@@ -396,7 +396,7 @@ def hg_to_time(coefficients, hg_basis):
     # Matrix-vector multiplication: coefficients^T @ hg_basis
     # Shape: (len(t),) = (N_modes,) @ (N_modes, len(t))
     A = torch.sum(coefficients[:, None] * hg_basis, dim=0)
-    return A.float()
+    return A.to(torch.cfloat)
 
 def analyze_pulse_in_hg_basis(pulse, hg_basis, t, pulse_name="Pulse"):
     
