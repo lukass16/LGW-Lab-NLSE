@@ -386,17 +386,13 @@ def get_hg_basis(N_modes, t, t0=1.0):
     return hg_basis
 
 def time_to_hg(A, hg_basis, dt):
-    # Matrix multiplication: each row of hg_basis dotted with A
-    # Shape: (N_modes,) = (N_modes, len(t)) @ (len(t),)
     integrand = hg_basis * A[None, :]  # Broadcast A to match hg_basis shape
     coefficients = torch.trapz(integrand, dx=dt, dim=1)
-    return coefficients.to(torch.cfloat)
+    return coefficients # * removed the .float and .to(torch.cfloat) so that works with any dtype and does not set it
 
 def hg_to_time(coefficients, hg_basis):
-    # Matrix-vector multiplication: coefficients^T @ hg_basis
-    # Shape: (len(t),) = (N_modes,) @ (N_modes, len(t))
     A = torch.sum(coefficients[:, None] * hg_basis, dim=0)
-    return A.to(torch.cfloat)
+    return A # * removed the .float and .to(torch.cfloat) so that works with any dtype and does not set it
 
 def analyze_pulse_in_hg_basis(pulse, hg_basis, t, pulse_name="Pulse"):
     

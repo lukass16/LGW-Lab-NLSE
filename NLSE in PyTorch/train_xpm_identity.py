@@ -262,7 +262,7 @@ def setup_training(config, device, transformation_name='identity'):
     
     # Define input strong pulse
     A_strong = strong_soliton(t, beta2_k, gamma_k, tau)
-    A_strong_hg = time_to_hg(A_strong, hg_basis, dt)
+    A_strong_hg = time_to_hg(A_strong, hg_basis, dt).float() # set to float so that the theta is also float (only real part)
     theta = torch.nn.Parameter(A_strong_hg.clone().detach().requires_grad_(True))
     
     # Define penalty mask
@@ -324,7 +324,7 @@ def setup_training(config, device, transformation_name='identity'):
     
     # Define forward pass
     def forward(theta, hg_basis):
-        Ain_k = hg_to_time(theta, hg_basis)
+        Ain_k = hg_to_time(theta, hg_basis).to(torch.cfloat) # make sure this is complex for simulation
         return split_step_fourier_xpm_batch(
             x, Ain_k, dz, Nz, 
             beta2_j, beta2_k, 
