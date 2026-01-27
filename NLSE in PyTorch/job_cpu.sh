@@ -11,4 +11,4 @@ export WANDB_API_KEY=fa6aa2781732fe60c4a13ca88d919b7f56360fd8
 
 module load miniconda
 conda activate torch-gpu
-python train_xpm_identity.py --config configs/config.yaml
+python train_xpm_unitary.py --config configs/config.yaml

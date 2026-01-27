@@ -40,6 +40,15 @@ def dispersion_operator(A, beta2, Nt, dt, dz):
     A_ft *= linear_op  # Apply linear operator
     return torch.fft.ifft(A_ft)  # Transform back to real space
     #! note - function changed on 10/12/2025 could lead to errors in other files, if implemented directly
+    
+def drift_dispersion_operator(A, beta2, delta_beta, Nt, dt, dz):
+    """Apply the dispersion operator for the linear step in Fourier space using PyTorch."""
+    omega = 2 * torch.pi * torch.fft.fftfreq(Nt, dt, device=A.device)
+    linear_op = torch.exp(1.0j * (0.5*beta2 * omega**2 - delta_beta * omega) * dz)
+    A_ft = torch.fft.fft(A)  # Transform to Fourier space
+    A_ft *= linear_op  # Apply linear operator
+    return torch.fft.ifft(A_ft)  # Transform back to real space
+    #! note - function changed on 10/12/2025 could lead to errors in other files, if implemented directly
 
 def nonlinear_operator(gamma, A, dz):
     """Apply the nonlinear operator for the nonlinear step in real space using PyTorch."""
@@ -102,6 +111,47 @@ def split_step_fourier_xpm(A0_j, A0_k, dz, Nz, beta2_j, beta2_k, gamma_j, gamma_
             # for strong wave k
             A_k = nonlinear_operator_xpm(gamma_k, _A_k, _A_j, dz)  # Apply XPM nonlinear operator
             A_k = dispersion_operator(A_k, beta2_k, Nt, dt, dz)  # Apply dispersion operator
+            A_k_evolution[:, i+1] = A_k
+
+    return A_j_evolution, A_k_evolution
+
+def drift_split_step_fourier_xpm(A0_j, A0_k, dz, Nz, beta2_j, beta2_k, delta_beta, gamma_j, gamma_k, Lt, strangsplitting = True): # A_j = weak, A_k = strong
+    """Implement the Split-Step Fourier Method with XPM using PyTorch."""
+    A_j = A0_j.clone()
+    A_k = A0_k.clone()
+    Nt = len(A_j)
+    dt = Lt / Nt
+    A_j_evolution = torch.zeros((Nt, Nz+1), dtype=torch.complex64, device=A0_j.device)
+    A_k_evolution = torch.zeros((Nt, Nz+1), dtype=torch.complex64, device=A0_k.device)
+    A_j_evolution[:, 0] = A0_j  # Set first column of A_j_evolution to be the initial pulse
+    A_k_evolution[:, 0] = A0_k  # Set first column of A_k_evolution to be the initial pulse
+
+    for i in range(Nz):
+        # we want to preserve symmetry in both of the waves - always use the wave at i-th step to go to i+1-th step ? is this that important?
+        _A_j = A_j.clone() 
+        _A_k = A_k.clone()
+        
+        if strangsplitting:
+            A_j = nonlinear_operator_xpm(gamma_j, _A_j, _A_k, dz/2)  # Apply XPM nonlinear operator
+            A_j = dispersion_operator(A_j, beta2_j, Nt, dt, dz)  # Apply dispersion operator
+            A_j = nonlinear_operator_xpm(gamma_j, A_j, _A_k, dz/2)  # Apply XPM nonlinear operator
+            
+            A_k = nonlinear_operator_xpm(gamma_k, _A_k, _A_j, dz/2)  # Apply XPM nonlinear operator
+            A_k = drift_dispersion_operator(A_k, beta2_k, delta_beta, Nt, dt, dz)  # Apply dispersion operator
+            A_k = nonlinear_operator_xpm(gamma_k, A_k, _A_j, dz/2)  # Apply XPM nonlinear operator
+            
+            A_j_evolution[:, i+1] = A_j
+            A_k_evolution[:, i+1] = A_k
+            
+        else:
+            # for weak wave j
+            A_j = nonlinear_operator_xpm(gamma_j, _A_j, _A_k, dz)  # Apply XPM nonlinear operator
+            A_j = drift_dispersion_operator(A_j, beta2_j, delta_beta, Nt, dt, dz)  # Apply dispersion operator
+            A_j_evolution[:, i+1] = A_j
+            
+            # for strong wave k
+            A_k = nonlinear_operator_xpm(gamma_k, _A_k, _A_j, dz)  # Apply XPM nonlinear operator
+            A_k = drift_dispersion_operator(A_k, beta2_k, delta_beta, Nt, dt, dz)  # Apply dispersion operator
             A_k_evolution[:, i+1] = A_k
 
     return A_j_evolution, A_k_evolution
@@ -357,11 +407,11 @@ def plot_cowave_evolution(A_j_evolution, A_k_evolution, t, Lz, Nz):
 
 """ Hermite-Gauss HG Basis Operations"""
 
-def hermite_gauss_stable(n, t, t0=1.0):
+def hermite_gauss_stable(n, t, t0=1.0, offset=0.0):
     """
     Stable computation of ψ_n(t; t0) using orthonormal recursion.
     """
-    x = t / t0
+    x = (t + offset) / t0
     psi_prev = torch.zeros_like(x, device=t.device)
     psi_curr = (1 / (math.pi**0.25 * math.sqrt(t0))) * torch.exp(-0.5 * x**2)
     
@@ -372,18 +422,19 @@ def hermite_gauss_stable(n, t, t0=1.0):
         psi_prev, psi_curr = psi_curr, psi_next
     return psi_curr
 
-def get_hg_basis(N_modes, t, t0=1.0):
+def get_hg_basis(N_modes, t, t0=1.0, offset=0.0):
     # Precompute all HG basis functions as a 2D tensor
     # Shape: (N_modes, len(t)) where each row is ψ_n(t)
     # GPU-compatible version - inherits device from input tensor t
     hg_basis = torch.zeros(N_modes, len(t), dtype=torch.float32, device=t.device)
 
     for n in range(N_modes):
-        hg_basis[n] = hermite_gauss_stable(n, t, t0)
+        hg_basis[n] = hermite_gauss_stable(n, t, t0, offset)
         
     print(f"Precomputed {N_modes} HG basis functions on grid of {len(t)} points on device {t.device}")
     
     return hg_basis
+
 
 def time_to_hg(A, hg_basis, dt):
     integrand = hg_basis * A[None, :]  # Broadcast A to match hg_basis shape
