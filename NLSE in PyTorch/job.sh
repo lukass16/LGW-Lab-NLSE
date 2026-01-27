@@ -15,4 +15,4 @@ module load CUDA
 module load cuDNN
 module load miniconda
 conda activate torch-gpu
-python train_xpm_identity.py --config configs/config_basic_identity_float.yaml
+python train_xpm_identity.py --config configs/config_hg_identity.yaml
