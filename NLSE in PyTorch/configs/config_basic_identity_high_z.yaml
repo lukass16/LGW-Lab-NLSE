@@ -3,7 +3,7 @@
 # Simulation Parameters
 simulation:
   Lz: 1e-3              # Propagation distance in km (1cm = 1e-5)
-  Nz: 200               # Number of steps in z
+  Nz: 500               # Number of steps in z
   Lt: 16                 # Temporal window size
   Nt: 4096               # Number of temporal points
   N_modes: 500           # Number of HG modes
@@ -41,7 +41,7 @@ plotting:
 wandb:
   project: "xpm-identity-operator"
   entity: lgwlab           # Set to your wandb entity/username, or null for default
-  name: basic-identity-float           # Set to a specific run name, or null for auto-generated
+  name: basic-identity-high-z           # Set to a specific run name, or null for auto-generated
   tags: []               # List of tags for this run
   notes: "Training with basic loss function and identity transformation"              # Notes about this run
 

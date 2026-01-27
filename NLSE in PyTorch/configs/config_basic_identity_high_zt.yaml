@@ -1,0 +1,52 @@
+# XPM Identity Operator Training Configuration
+
+# Simulation Parameters
+simulation:
+  Lz: 1e-3              # Propagation distance in km (1cm = 1e-5)
+  Nz: 500               # Number of steps in z
+  Lt: 16                 # Temporal window size
+  Nt: 16384               # Number of temporal points
+  N_modes: 500           # Number of HG modes
+
+# Medium Parameters
+medium:
+  beta2_j: -10           # anomalous GVD region for wave j
+  beta2_k: -10           # anomalous GVD region for wave k
+  gamma_j: 1             # Nonlinearity parameter for wave j
+  gamma_k: 1             # Nonlinearity parameter for wave k
+
+# Pulse Parameters
+pulse:
+  tau: 0.1               # Temporal width of the pulse = 100 fs - also, characteristic time of Hermite-Gauss basis
+
+# Training Parameters
+training:
+  batch_size: 16         # Number of modes to simulate (batch size)
+  amplitude_downscale: 1e-1  # Downscaling factor for input amplitudes
+  mask_percent: 0.8      # Size of the unpenalized region in percent of the total temporal window
+  m: 8                   # Number of slices to check for penalty
+  w_mse: 1e4             # MSE loss weight
+  w_pen: 1e3             # Penalty loss weight
+  lr: 5e-2               # Learning rate
+  N_train: 5000         # Number of training iterations
+  loss_fn: basic         # Loss function: basic, hg, or normalized_hg
+  transformation: identity         # Transformation: identity, permutation, rotation, or arbitrary
+
+# Plotting Parameters
+plotting:
+  plot_percent: 0.3      # Percentage of central data to show in plots
+  mode_nr: 7             # Mode number to plot for evaluation
+
+# Wandb Configuration
+wandb:
+  project: "xpm-identity-operator"
+  entity: lgwlab           # Set to your wandb entity/username, or null for default
+  name: basic-identity-high-zt           # Set to a specific run name, or null for auto-generated
+  tags: []               # List of tags for this run
+  notes: "Training with basic loss function and identity transformation"              # Notes about this run
+
+# Device Configuration
+device:
+  use_cuda: true         # Whether to use CUDA if available
+  device_id: 0           # GPU device ID (if using CUDA)
+
