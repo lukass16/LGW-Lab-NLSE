@@ -322,6 +322,50 @@ def setup_training(config, device, transformation_name='identity'):
             
         return w_mse * mse_loss, w_pen * pen_loss
     
+    # Fidelity-based loss function (phase-aware)
+    def fid_phase_loss_function(A_j_evolution, A_k_evolution):
+        """Fidelity loss on HG coefficients (phase-aware, no normalization)"""
+        final_j = A_j_evolution[:, :, -1]  # shape: (B, Nt)
+        # Compute HG coefficients for each signal in the batch
+        final_j_hg = torch.stack([time_to_hg(final_j[i], hg_basis_B, dt) for i in range(B)])  # shape: (B, B)
+        
+        # Penalization loss
+        pen_loss = 0.0
+        zeros = torch.zeros(B, Nt, dtype=torch.float32, device=device)
+        for i in iters:
+            pen_loss = pen_loss + F.mse_loss(torch.abs(A_k_evolution[:, :, i]*penalty)**2, zeros)
+        
+        # Fidelity loss (phase-aware)
+        dot_products = torch.sum(final_j_hg.conj() * y_hg, dim=1)  # sum along rows
+        fidelity_avg = torch.mean(torch.abs(dot_products))
+        fid_loss = -fidelity_avg  # negative because we want to maximize fidelity
+        
+        return w_mse * fid_loss, w_pen * pen_loss
+    
+    # Fidelity-based loss function (energy-only)
+    def fid_energy_loss_function(A_j_evolution, A_k_evolution):
+        """Fidelity loss on HG coefficient energies (phase-agnostic, no normalization)"""
+        final_j = A_j_evolution[:, :, -1]  # shape: (B, Nt)
+        # Compute HG coefficients for each signal in the batch
+        final_j_hg = torch.stack([time_to_hg(final_j[i], hg_basis_B, dt) for i in range(B)])  # shape: (B, B)
+        
+        # Penalization loss
+        pen_loss = 0.0
+        zeros = torch.zeros(B, Nt, dtype=torch.float32, device=device)
+        for i in iters:
+            pen_loss = pen_loss + F.mse_loss(torch.abs(A_k_evolution[:, :, i]*penalty)**2, zeros)
+        
+        # Convert to energy (magnitude) only - no conjugate needed as we're taking abs
+        final_j_hg_energy = torch.abs(final_j_hg)
+        y_hg_energy = torch.abs(y_hg)
+        
+        # Fidelity loss (energy-only)
+        dot_products = torch.sum(final_j_hg_energy * y_hg_energy, dim=1)  # sum along rows
+        fidelity_avg = torch.mean(dot_products)
+        fid_loss = -fidelity_avg  # negative because we want to maximize fidelity
+        
+        return w_mse * fid_loss, w_pen * pen_loss
+    
     # Define forward pass
     def forward(theta, hg_basis):
         Ain_k = hg_to_time(theta, hg_basis)
@@ -354,6 +398,8 @@ def setup_training(config, device, transformation_name='identity'):
         'loss_function': loss_function,
         'hg_loss_function': hg_loss_function,
         'normalized_hg_loss_function': normalized_hg_loss_function,
+        'fid_phase_loss_function': fid_phase_loss_function,
+        'fid_energy_loss_function': fid_energy_loss_function,
         'forward': forward,
         'optimizer': optimizer,
         'dz': dz,
@@ -378,6 +424,12 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
     elif loss_fn_name == 'normalized_hg':
         loss_function = training_setup['normalized_hg_loss_function']
         print(f"Using normalized HG coefficient loss function")
+    elif loss_fn_name == 'fid_phase':
+        loss_function = training_setup['fid_phase_loss_function']
+        print(f"Using fidelity (phase-aware) loss function")
+    elif loss_fn_name == 'fid_energy':
+        loss_function = training_setup['fid_energy_loss_function']
+        print(f"Using fidelity (energy-only) loss function")
     else:  # 'basic'
         loss_function = training_setup['loss_function']
         print(f"Using basic loss function")
@@ -431,6 +483,13 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
         losses_pen.append(loss_pen_val)
         losses.append(loss_val)
         
+        # Universal evaluation metric - always compute HG basis loss for comparison across runs
+        with torch.no_grad():
+            final_j = A_j_evolution[:, :, -1]
+            final_j_hg = torch.stack([time_to_hg(final_j[j], training_setup['hg_basis_B'], training_setup['dt']) 
+                                     for j in range(final_j.shape[0])])
+            eval_hg_loss = F.mse_loss(torch.abs(final_j_hg)**2, torch.abs(training_setup['y_hg'])**2).item()
+        
         # Check if this is the best model so far
         if loss_val < best_loss:
             best_loss = loss_val
@@ -446,6 +505,7 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
                 'loss': loss_val,
                 'loss_mse': loss_mse_val,
                 'loss_pen': loss_pen_val,
+                'eval_hg_loss': eval_hg_loss,
             }, checkpoint_path)
         
         # Log to wandb
@@ -456,6 +516,7 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
                 'loss_mse': loss_mse_val,
                 'loss_pen': loss_pen_val,
                 'best_loss': best_loss,
+                'eval_hg_loss': eval_hg_loss,  # Universal evaluation metric
             })
         
         # Print progress every few iterations
@@ -470,6 +531,11 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
     # Final forward pass for evaluation (using best model)
     with torch.no_grad():
         A_j_evolution, A_k_evolution = forward(theta, hg_basis)
+        # Compute final eval_hg_loss
+        final_j = A_j_evolution[:, :, -1]
+        final_j_hg = torch.stack([time_to_hg(final_j[j], training_setup['hg_basis_B'], training_setup['dt']) 
+                                 for j in range(final_j.shape[0])])
+        final_eval_hg_loss = F.mse_loss(torch.abs(final_j_hg)**2, torch.abs(training_setup['y_hg'])**2).item()
     
     # Save final losses
     final_losses = {
@@ -479,6 +545,7 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
         'final_loss': losses[-1],
         'final_loss_mse': losses_mse[-1],
         'final_loss_pen': losses_pen[-1],
+        'final_eval_hg_loss': final_eval_hg_loss,
         'best_loss': best_loss,
         'best_iteration': best_iteration,
         'best_loss_mse': losses_mse[best_iteration] if best_iteration >= 0 else None,
@@ -496,6 +563,7 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
             'final_loss': losses[-1],
             'final_loss_mse': losses_mse[-1],
             'final_loss_pen': losses_pen[-1],
+            'final_eval_hg_loss': final_eval_hg_loss,
             'best_loss': best_loss,
             'best_iteration': best_iteration,
         })
@@ -671,8 +739,8 @@ def main():
     parser.add_argument('--no-wandb', action='store_true',
                         help='Disable wandb logging')
     parser.add_argument('--loss-fn', type=str, default=None,
-                        choices=['basic', 'hg', 'normalized_hg'],
-                        help='Loss function to use: basic, hg, or normalized_hg (overrides config file)')
+                        choices=['basic', 'hg', 'normalized_hg', 'fid_phase', 'fid_energy'],
+                        help='Loss function to use: basic, hg, normalized_hg, fid_phase, or fid_energy (overrides config file)')
     parser.add_argument('--transformation', type=str, default=None,
                         choices=VALID_TRANSFORMATIONS,
                         help=f'Transformation to train: {", ".join(VALID_TRANSFORMATIONS)} (overrides config file)')
@@ -690,7 +758,7 @@ def main():
     else:
         # Get from config file, default to 'basic' if not specified
         loss_fn = config.get('training', {}).get('loss_fn', 'basic')
-        if loss_fn not in ['basic', 'hg', 'normalized_hg']:
+        if loss_fn not in ['basic', 'hg', 'normalized_hg', 'fid_phase', 'fid_energy']:
             print(f"Warning: Invalid loss_fn '{loss_fn}' in config file. Using 'basic' instead.")
             loss_fn = 'basic'
         print(f"Loss function from config file: {loss_fn}")
