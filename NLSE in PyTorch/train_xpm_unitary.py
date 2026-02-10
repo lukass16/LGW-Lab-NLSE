@@ -337,7 +337,7 @@ def setup_training(config, device, transformation_name='identity'):
         
         # Fidelity loss (phase-aware)
         dot_products = torch.sum(final_j_hg.conj() * y_hg, dim=1)  # sum along rows
-        fidelity_avg = torch.mean(torch.abs(dot_products))
+        fidelity_avg = torch.mean(torch.abs(dot_products)**2)
         fid_loss = -fidelity_avg  # negative because we want to maximize fidelity
         
         return w_mse * fid_loss, w_pen * pen_loss
@@ -361,7 +361,7 @@ def setup_training(config, device, transformation_name='identity'):
         
         # Fidelity loss (energy-only)
         dot_products = torch.sum(final_j_hg_energy * y_hg_energy, dim=1)  # sum along rows
-        fidelity_avg = torch.mean(dot_products)
+        fidelity_avg = torch.mean(dot_products**2)
         fid_loss = -fidelity_avg  # negative because we want to maximize fidelity
         
         return w_mse * fid_loss, w_pen * pen_loss
@@ -483,12 +483,20 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
         losses_pen.append(loss_pen_val)
         losses.append(loss_val)
         
-        # Universal evaluation metric - always compute HG basis loss for comparison across runs
+        # Universal evaluation metric - compute phase-aware fidelity for comparison across runs
         with torch.no_grad():
             final_j = A_j_evolution[:, :, -1]
             final_j_hg = torch.stack([time_to_hg(final_j[j], training_setup['hg_basis_B'], training_setup['dt']) 
                                      for j in range(final_j.shape[0])])
-            eval_hg_loss = F.mse_loss(torch.abs(final_j_hg)**2, torch.abs(training_setup['y_hg'])**2).item()
+            # Fidelity calculation (phase-aware)
+            # Compute target fidelity (perfect case: target vs target)
+            target_dot_products = torch.sum(training_setup['y_hg'].conj() * training_setup['y_hg'], dim=1)
+            target_fidelity_avg = torch.mean(torch.abs(target_dot_products)).item()
+            # Compute actual fidelity (output vs target)
+            dot_products = torch.sum(final_j_hg.conj() * training_setup['y_hg'], dim=1)
+            actual_fidelity_avg = torch.mean(torch.abs(dot_products)).item()
+            # Normalize to percentage (0-100, can exceed 100 if output amplitude > target)
+            eval_hg_fidelity = (actual_fidelity_avg / (target_fidelity_avg + 1e-10)) * 100
         
         # Check if this is the best model so far
         if loss_val < best_loss:
@@ -505,7 +513,7 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
                 'loss': loss_val,
                 'loss_mse': loss_mse_val,
                 'loss_pen': loss_pen_val,
-                'eval_hg_loss': eval_hg_loss,
+                'eval_hg_fidelity': eval_hg_fidelity,
             }, checkpoint_path)
         
         # Log to wandb
@@ -516,7 +524,7 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
                 'loss_mse': loss_mse_val,
                 'loss_pen': loss_pen_val,
                 'best_loss': best_loss,
-                'eval_hg_loss': eval_hg_loss,  # Universal evaluation metric
+                'eval_hg_fidelity': eval_hg_fidelity,  # Universal evaluation metric (phase-aware fidelity)
             })
         
         # Print progress every few iterations
@@ -531,11 +539,19 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
     # Final forward pass for evaluation (using best model)
     with torch.no_grad():
         A_j_evolution, A_k_evolution = forward(theta, hg_basis)
-        # Compute final eval_hg_loss
+        # Compute final eval_hg_fidelity (phase-aware)
         final_j = A_j_evolution[:, :, -1]
         final_j_hg = torch.stack([time_to_hg(final_j[j], training_setup['hg_basis_B'], training_setup['dt']) 
                                  for j in range(final_j.shape[0])])
-        final_eval_hg_loss = F.mse_loss(torch.abs(final_j_hg)**2, torch.abs(training_setup['y_hg'])**2).item()
+        # Fidelity calculation (phase-aware)
+        # Compute target fidelity (perfect case: target vs target)
+        target_dot_products = torch.sum(training_setup['y_hg'].conj() * training_setup['y_hg'], dim=1)
+        target_fidelity_avg = torch.mean(torch.abs(target_dot_products)).item()
+        # Compute actual fidelity (output vs target)
+        dot_products = torch.sum(final_j_hg.conj() * training_setup['y_hg'], dim=1)
+        actual_fidelity_avg = torch.mean(torch.abs(dot_products)).item()
+        # Normalize to percentage (0-100, can exceed 100 if output amplitude > target)
+        final_eval_hg_fidelity = (actual_fidelity_avg / (target_fidelity_avg + 1e-10)) * 100
     
     # Save final losses
     final_losses = {
@@ -545,7 +561,7 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
         'final_loss': losses[-1],
         'final_loss_mse': losses_mse[-1],
         'final_loss_pen': losses_pen[-1],
-        'final_eval_hg_loss': final_eval_hg_loss,
+        'final_eval_hg_fidelity': final_eval_hg_fidelity,
         'best_loss': best_loss,
         'best_iteration': best_iteration,
         'best_loss_mse': losses_mse[best_iteration] if best_iteration >= 0 else None,
@@ -563,7 +579,7 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
             'final_loss': losses[-1],
             'final_loss_mse': losses_mse[-1],
             'final_loss_pen': losses_pen[-1],
-            'final_eval_hg_loss': final_eval_hg_loss,
+            'final_eval_hg_fidelity': final_eval_hg_fidelity,
             'best_loss': best_loss,
             'best_iteration': best_iteration,
         })
@@ -728,6 +744,125 @@ def save_model_parameters(training_setup, run_dir, best_iteration=None, best_los
         print(f"Model parameters saved to {params_dir}")
 
 
+def visualize_unitary_comparison(config, training_setup, run_dir):
+    """
+    Visualize the target vs actual unitary transformation matrices.
+    
+    This function performs a simulation run with the trained parameters and reconstructs
+    the actual unitary transformation by comparing input and output HG coefficients.
+    Creates a side-by-side comparison plot of target and actual unitary matrices.
+    
+    Args:
+        config: Configuration dictionary
+        training_setup: Dictionary containing training setup (theta, forward function, etc.)
+        run_dir: Path to run directory for saving the plot
+    """
+    print("\nGenerating unitary transformation comparison...")
+    
+    # Extract training setup components
+    theta = training_setup['theta']
+    forward = training_setup['forward']
+    hg_basis = training_setup['hg_basis']
+    hg_basis_B = training_setup['hg_basis_B']
+    dt = training_setup['dt']
+    U_target = training_setup['U']
+    transformation_name = training_setup['transformation_name']
+    
+    # Get batch size from x
+    x = training_setup['x']
+    batch_size = x.shape[0]
+    
+    # Extract amplitude scaling factor
+    amplitude_downscale = float(config['training']['amplitude_downscale'])
+    
+    # Run simulation with best parameters
+    with torch.no_grad():
+        A_j_evolution, A_k_evolution = forward(theta, hg_basis)
+        
+        # Extract final outputs for each mode
+        final_outputs = A_j_evolution[:, :, -1]  # shape: (B, Nt)
+        
+        # Convert outputs to HG coefficients for each batch element
+        # Each batch element corresponds to a different input mode
+        output_hg_coeffs = torch.stack([
+            time_to_hg(final_outputs[i], hg_basis_B, dt) 
+            for i in range(batch_size)
+        ])  # shape: (B, B)
+        
+        # The input HG coefficients are essentially identity matrix scaled
+        # input_hg_coeffs[i, j] = amplitude_downscale if i==j, else 0
+        # So the actual transformation matrix is obtained by dividing by the scaling
+        U_actual = output_hg_coeffs / amplitude_downscale
+    
+    # Convert to numpy for plotting
+    U_target_np = U_target.detach().cpu().numpy()
+    U_actual_np = U_actual.detach().cpu().numpy()
+    
+    # Create visualization with two subplots
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 7))
+    
+    # Plot 1: Target unitary transformation (magnitude)
+    im1 = ax1.imshow(
+        np.abs(U_target_np), 
+        cmap='viridis', 
+        aspect='auto',
+        interpolation='nearest'
+    )
+    ax1.set_title(f'Target Unitary: {transformation_name}', fontsize=14, fontweight='bold')
+    ax1.set_xlabel('Input Mode', fontsize=12)
+    ax1.set_ylabel('Output Mode', fontsize=12)
+    ax1.set_xticks(range(batch_size))
+    ax1.set_yticks(range(batch_size))
+    cbar1 = plt.colorbar(im1, ax=ax1)
+    cbar1.set_label('|U|', fontsize=12)
+    
+    # Plot 2: Actual unitary transformation from simulation (magnitude)
+    im2 = ax2.imshow(
+        np.abs(U_actual_np), 
+        cmap='viridis', 
+        aspect='auto',
+        interpolation='nearest'
+    )
+    ax2.set_title('Actual Unitary from Simulation', fontsize=14, fontweight='bold')
+    ax2.set_xlabel('Input Mode', fontsize=12)
+    ax2.set_ylabel('Output Mode', fontsize=12)
+    ax2.set_xticks(range(batch_size))
+    ax2.set_yticks(range(batch_size))
+    cbar2 = plt.colorbar(im2, ax=ax2)
+    cbar2.set_label('|U|', fontsize=12)
+    
+    # Calculate and display fidelity metric
+    fidelity = torch.mean(torch.abs(U_actual.conj() * U_target)).item()
+    mse = torch.mean(torch.abs(U_actual - U_target)**2).item()
+    
+    plt.suptitle(
+        f'Unitary Transformation Comparison\nFidelity: {fidelity:.4f} | MSE: {mse:.6f}',
+        fontsize=16,
+        fontweight='bold',
+        y=1.02
+    )
+    
+    plt.tight_layout()
+    
+    # Save the figure
+    plots_dir = run_dir / "plots"
+    plots_dir.mkdir(exist_ok=True)
+    save_path = plots_dir / "unitary_comparison.png"
+    plt.savefig(save_path, dpi=150, bbox_inches='tight')
+    plt.close()
+    
+    print(f"Unitary comparison plot saved to {save_path}")
+    print(f"  Fidelity: {fidelity:.4f}")
+    print(f"  MSE: {mse:.6f}")
+    
+    # Also save the actual unitary matrix as numpy array
+    params_dir = run_dir / "parameters"
+    params_dir.mkdir(exist_ok=True)
+    U_actual_path = params_dir / "actual_unitary_matrix.npy"
+    np.save(U_actual_path, U_actual_np)
+    print(f"Actual unitary matrix saved to {U_actual_path}")
+
+
 """--------------------------------- Main Function ---------------------------------"""
 
 def main():
@@ -818,6 +953,9 @@ def main():
     # Save model parameters (best model)
     print("\nSaving model parameters...")
     save_model_parameters(training_setup, run_dir, best_iteration, best_loss)
+    
+    # Generate unitary transformation comparison visualization
+    visualize_unitary_comparison(config, training_setup, run_dir)
     
     print(f"\n{'='*80}")
     print(f"Training completed successfully!")
