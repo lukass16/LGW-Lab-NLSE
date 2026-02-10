@@ -27,9 +27,9 @@ training:
   m: 8                   # Number of slices to check for penalty
   w_mse: 1e4             # MSE loss weight
   w_pen: 1e3             # Penalty loss weight
-  lr: 5e-2               # Learning rate
-  N_train: 5000         # Number of training iterations
-  loss_fn: basic         # Loss function: basic, hg, or normalized_hg
+  lr: 1e-2               # Learning rate
+  N_train: 15000         # Number of training iterations
+  loss_fn: hg         # Loss function: basic, hg, or normalized_hg
   transformation: identity         # Transformation: identity, permutation, rotation, or arbitrary
 
 # Plotting Parameters
@@ -41,9 +41,9 @@ plotting:
 wandb:
   project: "xpm-identity-operator"
   entity: lgwlab           # Set to your wandb entity/username, or null for default
-  name: basic-identity-high-t           # Set to a specific run name, or null for auto-generated
+  name: hg-identity-high-t           # Set to a specific run name, or null for auto-generated
   tags: []               # List of tags for this run
-  notes: "Training with basic loss function and identity transformation"              # Notes about this run
+  notes: "Training with hg loss function and identity transformation"              # Notes about this run
 
 # Device Configuration
 device:
