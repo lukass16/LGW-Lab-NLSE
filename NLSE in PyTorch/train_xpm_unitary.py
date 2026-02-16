@@ -798,15 +798,25 @@ def visualize_unitary_comparison(config, training_setup, run_dir):
     U_target_np = U_target.detach().cpu().numpy()
     U_actual_np = U_actual.detach().cpu().numpy()
     
+    # Calculate magnitude arrays
+    U_target_mag = np.abs(U_target_np)
+    U_actual_mag = np.abs(U_actual_np)
+    
+    # Determine common scale for both plots
+    vmin = min(U_target_mag.min(), U_actual_mag.min())
+    vmax = max(U_target_mag.max(), U_actual_mag.max())
+    
     # Create visualization with two subplots
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 7))
     
     # Plot 1: Target unitary transformation (magnitude)
     im1 = ax1.imshow(
-        np.abs(U_target_np), 
+        U_target_mag, 
         cmap='viridis', 
         aspect='auto',
-        interpolation='nearest'
+        interpolation='nearest',
+        vmin=vmin,
+        vmax=vmax
     )
     ax1.set_title(f'Target Unitary: {transformation_name}', fontsize=14, fontweight='bold')
     ax1.set_xlabel('Input Mode', fontsize=12)
@@ -818,10 +828,12 @@ def visualize_unitary_comparison(config, training_setup, run_dir):
     
     # Plot 2: Actual unitary transformation from simulation (magnitude)
     im2 = ax2.imshow(
-        np.abs(U_actual_np), 
+        U_actual_mag, 
         cmap='viridis', 
         aspect='auto',
-        interpolation='nearest'
+        interpolation='nearest',
+        vmin=vmin,
+        vmax=vmax
     )
     ax2.set_title('Actual Unitary from Simulation', fontsize=14, fontweight='bold')
     ax2.set_xlabel('Input Mode', fontsize=12)
