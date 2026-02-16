@@ -380,20 +380,15 @@ def setup_training(config, device, transformation_name='identity'):
         
         return w_mse * fid_loss, w_pen * pen_loss
     
-    # Adaptive fidelity loss: uses Re(<output|target>) when target is diagonal, else |<output|target>|^2
-    # For diagonal targets, each row has one nonzero entry, so |<a|b>|^2 is phase-insensitive.
-    # Using Re(<a|b>)^2 instead enforces phase alignment even for diagonal targets (real or complex).
-    y_hg_off_diag = y_hg.clone()
-    y_hg_off_diag[torch.arange(B), torch.arange(B)] = 0
-    y_hg_is_diagonal = torch.all(y_hg_off_diag.abs() < 1e-10).item()
-    
-    def fid_phase_adaptive_loss_function(A_j_evolution, A_k_evolution):
-        """Fidelity loss that adapts to the target structure.
+    # Trace loss: sums complex overlaps across all modes before taking the magnitude,
+    # so relative phases between different mode pairs affect the loss.
+    # Loss = -|1/B * sum_i <output_i|target_i>|^2
+    def trace_loss_function(A_j_evolution, A_k_evolution):
+        """Trace-based loss on HG coefficients.
         
-        For diagonal targets: uses -Re(<output|target>)^2 so that phase alignment is enforced
-            (|<a|b>|^2 is phase-blind when each row has a single nonzero entry).
-        For non-diagonal targets: uses -|<output|target>|^2 (standard fid_phase), where
-            cross-terms in the sum make it naturally phase-sensitive.
+        Sums the complex dot products across all modes before taking the absolute value,
+        so the relative phases between different mode transformations matter.
+        Analogous to |Tr(U_actual^dagger @ U_target)|^2 / B^2.
         """
         final_j = A_j_evolution[:, :, -1]  # shape: (B, Nt)
         final_j_hg = torch.stack([time_to_hg(final_j[i], hg_basis_B, dt) for i in range(B)])  # shape: (B, B)
@@ -405,16 +400,10 @@ def setup_training(config, device, transformation_name='identity'):
             pen_loss = pen_loss + F.mse_loss(torch.abs(A_k_evolution[:, :, i]*penalty)**2, zeros)
         
         dot_products = torch.sum(final_j_hg.conj() * y_hg, dim=1)  # shape: (B,)
+        trace_fidelity = torch.abs(torch.sum(dot_products) / B)**2
+        trace_loss = -trace_fidelity
         
-        if y_hg_is_diagonal:
-            # Diagonal target: use Re(<output|target>)^2 to enforce phase alignment
-            fidelity_avg = torch.mean(torch.real(dot_products)**2)
-        else:
-            # Non-diagonal target: standard |<output|target>|^2 (cross-terms handle phase)
-            fidelity_avg = torch.mean(torch.abs(dot_products)**2)
-        
-        fid_loss = -fidelity_avg
-        return w_mse * fid_loss, w_pen * pen_loss
+        return w_mse * trace_loss, w_pen * pen_loss
     
     # HG phase-aware loss: complex MSE on HG coefficients (penalizes real and imaginary deviations)
     def hg_phase_loss_function(A_j_evolution, A_k_evolution):
@@ -422,8 +411,7 @@ def setup_training(config, device, transformation_name='identity'):
         final_j = A_j_evolution[:, :, -1]  # shape: (B, Nt)
         final_j_hg = torch.stack([time_to_hg(final_j[i], hg_basis_B, dt) for i in range(B)])  # shape: (B, B)
         
-        # Complex MSE: penalizes deviations in both real and imaginary parts
-        mse_loss = F.mse_loss(final_j_hg.real, y_hg.real) + F.mse_loss(final_j_hg.imag, y_hg.imag)
+        mse_loss = torch.mean(torch.abs(final_j_hg - y_hg)**2) 
         
         # Penalization loss
         pen_loss = 0.0
@@ -467,13 +455,57 @@ def setup_training(config, device, transformation_name='identity'):
         'normalized_hg_loss_function': normalized_hg_loss_function,
         'fid_phase_loss_function': fid_phase_loss_function,
         'fid_energy_loss_function': fid_energy_loss_function,
-        'fid_phase_adaptive_loss_function': fid_phase_adaptive_loss_function,
+        'trace_loss_function': trace_loss_function,
         'hg_phase_loss_function': hg_phase_loss_function,
         'forward': forward,
         'optimizer': optimizer,
         'dz': dz,
         'dt': dt
     }
+
+
+"""--------------------------------- Evaluation Functions ---------------------------------"""
+
+def eval_frobenius_norm(final_j_hg, y_hg):
+    """Evaluate the Frobenius norm between predicted and target HG coefficients.
+    
+    Computes mean(|predicted - target|^2), i.e. the MSE of complex coefficient differences.
+    Lower is better. A value of 0 means perfect reconstruction.
+    
+    Args:
+        final_j_hg: Predicted HG coefficients, shape (B, B), complex
+        y_hg: Target HG coefficients, shape (B, B), complex
+    
+    Returns:
+        Frobenius norm (scalar float)
+    """
+    return torch.mean(torch.abs(final_j_hg - y_hg)**2).item()
+
+
+def eval_trace_fidelity(final_j_hg, y_hg):
+    """Evaluate trace fidelity between predicted and target HG coefficients.
+    
+    Computes |1/B * sum_i <predicted_i|target_i>|^2.
+    The complex dot products are summed before taking the magnitude, so relative
+    phases between different modes matter. Analogous to |Tr(U_actual^dag U_target)|^2 / B^2.
+    Higher is better. Normalized by dividing by the ideal trace fidelity (target vs target).
+    
+    Args:
+        final_j_hg: Predicted HG coefficients, shape (B, B), complex
+        y_hg: Target HG coefficients, shape (B, B), complex
+    
+    Returns:
+        Trace fidelity percentage (0-100, scalar float)
+    """
+    B = final_j_hg.shape[0]
+    # Actual trace fidelity
+    dot_products = torch.sum(final_j_hg.conj() * y_hg, dim=1)  # shape: (B,)
+    actual_trace_fid = torch.abs(torch.sum(dot_products) / B)**2
+    # Target trace fidelity (perfect case)
+    target_dot_products = torch.sum(y_hg.conj() * y_hg, dim=1)
+    target_trace_fid = torch.abs(torch.sum(target_dot_products) / B)**2
+    # Normalize to percentage
+    return (actual_trace_fid / (target_trace_fid + 1e-10) * 100).item()
 
 
 def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_name='basic'):
@@ -499,9 +531,9 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
     elif loss_fn_name == 'fid_energy':
         loss_function = training_setup['fid_energy_loss_function']
         print(f"Using fidelity (energy-only) loss function")
-    elif loss_fn_name == 'fid_phase_adaptive':
-        loss_function = training_setup['fid_phase_adaptive_loss_function']
-        print(f"Using adaptive fidelity (phase-aware for real targets) loss function")
+    elif loss_fn_name == 'trace':
+        loss_function = training_setup['trace_loss_function']
+        print(f"Using trace loss function")
     elif loss_fn_name == 'hg_phase':
         loss_function = training_setup['hg_phase_loss_function']
         print(f"Using HG phase-aware (complex MSE) loss function")
@@ -558,19 +590,18 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
         losses_pen.append(loss_pen_val)
         losses.append(loss_val)
         
-        # Universal evaluation metric - compute phase-aware fidelity for comparison across runs
+        # Universal evaluation metrics for comparison across runs
         with torch.no_grad():
             final_j = A_j_evolution[:, :, -1]
             final_j_hg = torch.stack([time_to_hg(final_j[j], training_setup['hg_basis_B'], training_setup['dt']) 
                                      for j in range(final_j.shape[0])])
-            # Fidelity calculation (phase-aware)
-            # Compute target fidelity (perfect case: target vs target)
+            eval_frob = eval_frobenius_norm(final_j_hg, training_setup['y_hg'])
+            eval_trace = eval_trace_fidelity(final_j_hg, training_setup['y_hg'])
+            # Legacy fidelity calculation (phase-aware, per-mode average)
             target_dot_products = torch.sum(training_setup['y_hg'].conj() * training_setup['y_hg'], dim=1)
             target_fidelity_avg = torch.mean(torch.abs(target_dot_products)).item()
-            # Compute actual fidelity (output vs target)
             dot_products = torch.sum(final_j_hg.conj() * training_setup['y_hg'], dim=1)
             actual_fidelity_avg = torch.mean(torch.abs(dot_products)).item()
-            # Normalize to percentage (0-100, can exceed 100 if output amplitude > target)
             eval_hg_fidelity = (actual_fidelity_avg / (target_fidelity_avg + 1e-10)) * 100
         
         # Check if this is the best model so far
@@ -589,6 +620,8 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
                 'loss_mse': loss_mse_val,
                 'loss_pen': loss_pen_val,
                 'eval_hg_fidelity': eval_hg_fidelity,
+                'eval_frobenius_norm': eval_frob,
+                'eval_trace_fidelity': eval_trace,
             }, checkpoint_path)
         
         # Log to wandb
@@ -599,7 +632,9 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
                 'loss_mse': loss_mse_val,
                 'loss_pen': loss_pen_val,
                 'best_loss': best_loss,
-                'eval_hg_fidelity': eval_hg_fidelity,  # Universal evaluation metric (phase-aware fidelity)
+                'eval_hg_fidelity': eval_hg_fidelity,
+                'eval_frobenius_norm': eval_frob,
+                'eval_trace_fidelity': eval_trace,
             })
         
         # Print progress every few iterations
@@ -614,18 +649,17 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
     # Final forward pass for evaluation (using best model)
     with torch.no_grad():
         A_j_evolution, A_k_evolution = forward(theta, hg_basis)
-        # Compute final eval_hg_fidelity (phase-aware)
         final_j = A_j_evolution[:, :, -1]
         final_j_hg = torch.stack([time_to_hg(final_j[j], training_setup['hg_basis_B'], training_setup['dt']) 
                                  for j in range(final_j.shape[0])])
-        # Fidelity calculation (phase-aware)
-        # Compute target fidelity (perfect case: target vs target)
+        # Evaluation metrics
+        final_eval_frob = eval_frobenius_norm(final_j_hg, training_setup['y_hg'])
+        final_eval_trace = eval_trace_fidelity(final_j_hg, training_setup['y_hg'])
+        # Legacy fidelity calculation (phase-aware, per-mode average)
         target_dot_products = torch.sum(training_setup['y_hg'].conj() * training_setup['y_hg'], dim=1)
         target_fidelity_avg = torch.mean(torch.abs(target_dot_products)).item()
-        # Compute actual fidelity (output vs target)
         dot_products = torch.sum(final_j_hg.conj() * training_setup['y_hg'], dim=1)
         actual_fidelity_avg = torch.mean(torch.abs(dot_products)).item()
-        # Normalize to percentage (0-100, can exceed 100 if output amplitude > target)
         final_eval_hg_fidelity = (actual_fidelity_avg / (target_fidelity_avg + 1e-10)) * 100
     
     # Save final losses
@@ -637,6 +671,8 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
         'final_loss_mse': losses_mse[-1],
         'final_loss_pen': losses_pen[-1],
         'final_eval_hg_fidelity': final_eval_hg_fidelity,
+        'final_eval_frobenius_norm': final_eval_frob,
+        'final_eval_trace_fidelity': final_eval_trace,
         'best_loss': best_loss,
         'best_iteration': best_iteration,
         'best_loss_mse': losses_mse[best_iteration] if best_iteration >= 0 else None,
@@ -655,6 +691,8 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
             'final_loss_mse': losses_mse[-1],
             'final_loss_pen': losses_pen[-1],
             'final_eval_hg_fidelity': final_eval_hg_fidelity,
+            'final_eval_frobenius_norm': final_eval_frob,
+            'final_eval_trace_fidelity': final_eval_trace,
             'best_loss': best_loss,
             'best_iteration': best_iteration,
         })
@@ -961,8 +999,8 @@ def main():
     parser.add_argument('--no-wandb', action='store_true',
                         help='Disable wandb logging')
     parser.add_argument('--loss-fn', type=str, default=None,
-                        choices=['basic', 'hg', 'normalized_hg', 'fid_phase', 'fid_energy', 'fid_phase_adaptive', 'hg_phase'],
-                        help='Loss function to use: basic, hg, normalized_hg, fid_phase, fid_energy, fid_phase_adaptive, or hg_phase (overrides config file)')
+                        choices=['basic', 'hg', 'normalized_hg', 'fid_phase', 'fid_energy', 'trace', 'hg_phase'],
+                        help='Loss function to use: basic, hg, normalized_hg, fid_phase, fid_energy, trace, or hg_phase (overrides config file)')
     parser.add_argument('--transformation', type=str, default=None,
                         choices=VALID_TRANSFORMATIONS,
                         help=f'Transformation to train: {", ".join(VALID_TRANSFORMATIONS)} (overrides config file)')
@@ -980,7 +1018,7 @@ def main():
     else:
         # Get from config file, default to 'basic' if not specified
         loss_fn = config.get('training', {}).get('loss_fn', 'basic')
-        if loss_fn not in ['basic', 'hg', 'normalized_hg', 'fid_phase', 'fid_energy', 'fid_phase_adaptive', 'hg_phase']:
+        if loss_fn not in ['basic', 'hg', 'normalized_hg', 'fid_phase', 'fid_energy', 'trace', 'hg_phase']:
             print(f"Warning: Invalid loss_fn '{loss_fn}' in config file. Using 'basic' instead.")
             loss_fn = 'basic'
         print(f"Loss function from config file: {loss_fn}")

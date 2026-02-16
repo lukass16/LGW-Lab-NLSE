@@ -29,7 +29,7 @@ training:
   w_pen: 1e3             # Penalty loss weight
   lr: 5e-2               # Learning rate
   N_train: 5000         # Number of training iterations
-  loss_fn: fid_phase     # Loss function: basic, hg, normalized_hg, fid_phase, fid_energy
+  loss_fn: fid_phase     # Loss function: basic, hg, normalized_hg, fid_phase, fid_energy, trace, hg_phase
   transformation: identity         # Transformation: identity, permutation, rotation, or arbitrary
 
 # Plotting Parameters
@@ -43,7 +43,7 @@ wandb:
   entity: lgwlab           # Set to your wandb entity/username, or null for default
   name: identity-loss-fid-phase           # Set to a specific run name, or null for auto-generated
   tags: ["fid_phase", "identity"]               # List of tags for this run
-  notes: "Training with fidelity (phase-aware) loss function and identity transformation"              # Notes about this run
+  notes: "Training with fidelity (phase-aware) loss function and identity transformation"
 
 # Device Configuration
 device:

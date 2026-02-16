@@ -29,7 +29,7 @@ training:
   w_pen: 1e3             # Penalty loss weight
   lr: 5e-2               # Learning rate
   N_train: 5000         # Number of training iterations
-  loss_fn: fid_energy    # Loss function: basic, hg, normalized_hg, fid_phase, fid_energy, fid_phase_adaptive, hg_phase
+  loss_fn: fid_energy    # Loss function: basic, hg, normalized_hg, fid_phase, fid_energy, trace, hg_phase
   transformation: beamsplitter   # Transformation: identity, permutation, rotation, arbitrary, or beamsplitter
 
 # Plotting Parameters

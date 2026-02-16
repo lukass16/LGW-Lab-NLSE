@@ -1,4 +1,4 @@
-# XPM Identity Operator Training Configuration - Basic Loss
+# XPM Beamsplitter Operator Training Configuration - Trace Loss
 
 # Simulation Parameters
 simulation:
@@ -29,8 +29,8 @@ training:
   w_pen: 1e3             # Penalty loss weight
   lr: 5e-2               # Learning rate
   N_train: 5000         # Number of training iterations
-  loss_fn: basic         # Loss function: basic, hg, normalized_hg, fid_phase, fid_energy
-  transformation: identity         # Transformation: identity, permutation, rotation, or arbitrary
+  loss_fn: trace         # Loss function: basic, hg, normalized_hg, fid_phase, fid_energy, trace, hg_phase
+  transformation: beamsplitter   # Transformation: identity, permutation, rotation, arbitrary, or beamsplitter
 
 # Plotting Parameters
 plotting:
@@ -41,9 +41,9 @@ plotting:
 wandb:
   project: "xpm-identity-operator"
   entity: lgwlab           # Set to your wandb entity/username, or null for default
-  name: identity-loss-basic           # Set to a specific run name, or null for auto-generated
-  tags: ["basic", "identity"]               # List of tags for this run
-  notes: "Training with basic intensity loss function and identity transformation"              # Notes about this run
+  name: beamsplitter-loss-trace           # Set to a specific run name, or null for auto-generated
+  tags: ["trace", "beamsplitter"]               # List of tags for this run
+  notes: "Training with trace loss function and beamsplitter transformation"
 
 # Device Configuration
 device:
