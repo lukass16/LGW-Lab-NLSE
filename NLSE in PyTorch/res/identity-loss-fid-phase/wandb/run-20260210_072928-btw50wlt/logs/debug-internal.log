@@ -1,0 +1,12 @@
+{"time":"2026-02-10T07:29:28.517212802-05:00","level":"INFO","msg":"stream: starting","core version":"0.22.3"}
+{"time":"2026-02-10T07:29:28.791070537-05:00","level":"INFO","msg":"stream: created new stream","id":"btw50wlt"}
+{"time":"2026-02-10T07:29:28.79111269-05:00","level":"INFO","msg":"handler: started","stream_id":"btw50wlt"}
+{"time":"2026-02-10T07:29:28.793849576-05:00","level":"INFO","msg":"stream: started","id":"btw50wlt"}
+{"time":"2026-02-10T07:29:28.793860707-05:00","level":"INFO","msg":"writer: started","stream_id":"btw50wlt"}
+{"time":"2026-02-10T07:29:28.793880606-05:00","level":"INFO","msg":"sender: started","stream_id":"btw50wlt"}
+{"time":"2026-02-10T08:11:50.399828332-05:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-02-10T08:11:50.808141333-05:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-02-10T08:11:50.812863487-05:00","level":"INFO","msg":"stream: closing","id":"btw50wlt"}
+{"time":"2026-02-10T08:11:50.812881185-05:00","level":"INFO","msg":"handler: closed","stream_id":"btw50wlt"}
+{"time":"2026-02-10T08:11:50.822224591-05:00","level":"INFO","msg":"sender: closed","stream_id":"btw50wlt"}
+{"time":"2026-02-10T08:11:50.822246362-05:00","level":"INFO","msg":"stream: closed","id":"btw50wlt"}

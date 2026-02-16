@@ -1,0 +1,141 @@
+_wandb:
+    value:
+        cli_version: 0.22.3
+        e:
+            ub7o7gc7835976cq81t4yyx68yhlnj3m:
+                args:
+                    - --config
+                    - configs/config_loss_fid_energy.yaml
+                codePath: train_xpm_unitary.py
+                codePathLocal: train_xpm_unitary.py
+                cpu_count: 32
+                cpu_count_logical: 32
+                cudaVersion: "12.8"
+                disk:
+                    /:
+                        total: "135072747520"
+                        used: "368173056"
+                email: lukasskellijs@gmail.com
+                executable: /home/lrk42/.conda/envs/torch-gpu/bin/python
+                gpu: NVIDIA RTX A5000
+                gpu_count: 1
+                gpu_nvidia:
+                    - architecture: Ampere
+                      cudaCores: 8192
+                      memoryTotal: "25757220864"
+                      name: NVIDIA RTX A5000
+                      uuid: GPU-345256cf-b724-9c9c-09fe-8b88f9b6cc91
+                host: r903u34n01.grace.ycrc.yale.edu
+                memory:
+                    total: "270145499136"
+                os: Linux-4.18.0-553.87.1.el8_10.x86_64-x86_64-with-glibc2.28
+                program: /vast/palmer/home.grace/lrk42/LGW Lab/unitary/LGW-Lab-NLSE/NLSE in PyTorch/train_xpm_unitary.py
+                python: CPython 3.11.14
+                root: runs/identity-loss-fid-energy
+                slurm:
+                    cluster_name: grace
+                    conf: /var/lib/slurmconf/slurm.conf
+                    cpus_on_node: "2"
+                    cpus_per_task: "2"
+                    export_env: NONE
+                    get_user_env: "1"
+                    gpus: "1"
+                    gpus_on_node: "1"
+                    gtids: "0"
+                    hint: nomultithread
+                    job_account: wright
+                    job_cpus_per_node: "2"
+                    job_end_time: "1769564282"
+                    job_gid: "11575"
+                    job_gpus: "1"
+                    job_id: "52963964"
+                    job_name: xpm_train_gpu
+                    job_nodelist: r903u34n01
+                    job_num_nodes: "1"
+                    job_partition: gpu
+                    job_qos: normal
+                    job_start_time: "1769553482"
+                    job_uid: "26647"
+                    job_user: lrk42
+                    jobid: "52963964"
+                    localid: "0"
+                    mem_per_cpu: "5120"
+                    nnodes: "1"
+                    nodeid: "0"
+                    nodelist: r903u34n01
+                    nprocs: "1"
+                    ntasks: "1"
+                    oom_kill_step: "0"
+                    prio_process: "0"
+                    procid: "0"
+                    submit_dir: /vast/palmer/home.grace/lrk42/LGW Lab/unitary/LGW-Lab-NLSE/NLSE in PyTorch
+                    submit_host: r904u10n01.grace.ycrc.yale.edu
+                    task_pid: "1594007"
+                    tasks_per_node: "1"
+                    threads_per_core: "1"
+                    topology_addr: hdrspine.r903u19.r903u34n01
+                    topology_addr_pattern: switch.switch.node
+                    tres_per_task: cpu=2
+                startedAt: "2026-01-27T22:38:44.376094Z"
+                writerId: ub7o7gc7835976cq81t4yyx68yhlnj3m
+        m: []
+        python_version: 3.11.14
+        t:
+            "1":
+                - 1
+            "2":
+                - 1
+            "3":
+                - 2
+                - 13
+                - 15
+                - 16
+            "4": 3.11.14
+            "5": 0.22.3
+            "12": 0.22.3
+            "13": linux-x86_64
+device:
+    value:
+        device_id: 0
+        use_cuda: true
+medium:
+    value:
+        beta2_j: -10
+        beta2_k: -10
+        gamma_j: 1
+        gamma_k: 1
+plotting:
+    value:
+        mode_nr: 7
+        plot_percent: 0.3
+pulse:
+    value:
+        tau: 0.1
+simulation:
+    value:
+        Lt: 16
+        Lz: "1e-3"
+        N_modes: 500
+        Nt: 4096
+        Nz: 200
+training:
+    value:
+        N_train: 5000
+        amplitude_downscale: "1e-1"
+        batch_size: 16
+        loss_fn: fid_energy
+        lr: "5e-2"
+        m: 8
+        mask_percent: 0.8
+        transformation: identity
+        w_mse: "1e4"
+        w_pen: "1e3"
+wandb:
+    value:
+        entity: lgwlab
+        name: identity-loss-fid-energy
+        notes: Training with fidelity (energy-only) loss function and identity transformation
+        project: xpm-identity-operator
+        tags:
+            - fid_energy
+            - identity
