@@ -93,7 +93,7 @@ def save_config_to_run_dir(config, run_dir):
     return config_path
 
 
-VALID_TRANSFORMATIONS = ['identity', 'permutation', 'rotation', 'arbitrary']
+VALID_TRANSFORMATIONS = ['identity', 'permutation', 'rotation', 'arbitrary', 'beamsplitter']
 
 
 def generate_transformation(transformation_name, num_modes, device, seed=27):
@@ -101,7 +101,7 @@ def generate_transformation(transformation_name, num_modes, device, seed=27):
     Generate a unitary transformation matrix.
     
     Args:
-        transformation_name: One of 'identity', 'permutation', 'rotation', 'arbitrary'
+        transformation_name: One of 'identity', 'permutation', 'rotation', 'arbitrary', 'beamsplitter'
         num_modes: Number of modes (size of the transformation matrix)
         device: Torch device
         seed: Random seed for reproducibility (default: 27)
@@ -138,6 +138,20 @@ def generate_transformation(transformation_name, num_modes, device, seed=27):
         for block_idx in range(num_blocks):
             start = block_idx * 2
             U[start:start+2, start:start+2] = rotation_2x2.to(torch.cfloat)
+        # Handle odd number of modes - last mode maps to itself
+        if num_modes % 2 == 1:
+            U[-1, -1] = 1.0
+    
+    elif transformation_name == 'beamsplitter':
+        # Block-diagonal balanced beamsplitters: 1/sqrt(2) * [[1, i], [i, 1]]
+        # Each pair of adjacent modes undergoes a 50:50 beamsplitter with pi/2 phase
+        # Non-diagonal and genuinely complex, so fidelity loss is phase-sensitive
+        bs = torch.tensor([[1.0, 1j], [1j, 1.0]], dtype=torch.cfloat, device=device) / np.sqrt(2)
+        U = torch.zeros((num_modes, num_modes), dtype=torch.cfloat, device=device)
+        num_blocks = num_modes // 2
+        for block_idx in range(num_blocks):
+            start = block_idx * 2
+            U[start:start+2, start:start+2] = bs
         # Handle odd number of modes - last mode maps to itself
         if num_modes % 2 == 1:
             U[-1, -1] = 1.0
@@ -366,14 +380,20 @@ def setup_training(config, device, transformation_name='identity'):
         
         return w_mse * fid_loss, w_pen * pen_loss
     
-    # Adaptive fidelity loss: uses Re(<output|target>) when target is real, else |<output|target>|^2
-    y_hg_is_real = torch.all(y_hg.imag.abs() < 1e-10).item()
+    # Adaptive fidelity loss: uses Re(<output|target>) when target is diagonal, else |<output|target>|^2
+    # For diagonal targets, each row has one nonzero entry, so |<a|b>|^2 is phase-insensitive.
+    # Using Re(<a|b>)^2 instead enforces phase alignment even for diagonal targets (real or complex).
+    y_hg_off_diag = y_hg.clone()
+    y_hg_off_diag[torch.arange(B), torch.arange(B)] = 0
+    y_hg_is_diagonal = torch.all(y_hg_off_diag.abs() < 1e-10).item()
     
     def fid_phase_adaptive_loss_function(A_j_evolution, A_k_evolution):
-        """Fidelity loss that adapts to whether the target is real or complex.
+        """Fidelity loss that adapts to the target structure.
         
-        For real targets: uses -|Re(<output|target>)|^2 so that phase alignment is enforced.
-        For complex targets: uses -|<output|target>|^2 (standard fid_phase).
+        For diagonal targets: uses -Re(<output|target>)^2 so that phase alignment is enforced
+            (|<a|b>|^2 is phase-blind when each row has a single nonzero entry).
+        For non-diagonal targets: uses -|<output|target>|^2 (standard fid_phase), where
+            cross-terms in the sum make it naturally phase-sensitive.
         """
         final_j = A_j_evolution[:, :, -1]  # shape: (B, Nt)
         final_j_hg = torch.stack([time_to_hg(final_j[i], hg_basis_B, dt) for i in range(B)])  # shape: (B, B)
@@ -386,11 +406,11 @@ def setup_training(config, device, transformation_name='identity'):
         
         dot_products = torch.sum(final_j_hg.conj() * y_hg, dim=1)  # shape: (B,)
         
-        if y_hg_is_real:
-            # Target is real: use Re(<output|target>) to enforce phase alignment
+        if y_hg_is_diagonal:
+            # Diagonal target: use Re(<output|target>)^2 to enforce phase alignment
             fidelity_avg = torch.mean(torch.real(dot_products)**2)
         else:
-            # Target is complex: standard |<output|target>|^2
+            # Non-diagonal target: standard |<output|target>|^2 (cross-terms handle phase)
             fidelity_avg = torch.mean(torch.abs(dot_products)**2)
         
         fid_loss = -fidelity_avg
