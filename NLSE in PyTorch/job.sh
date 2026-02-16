@@ -15,4 +15,4 @@ module load CUDA
 module load cuDNN
 module load miniconda
 conda activate torch-gpu
-python train_xpm_unitary.py --config configs/config_hg_identity_high_z.yaml
+python train_xpm_unitary.py --config configs/config_loss_hg_phase.yaml
