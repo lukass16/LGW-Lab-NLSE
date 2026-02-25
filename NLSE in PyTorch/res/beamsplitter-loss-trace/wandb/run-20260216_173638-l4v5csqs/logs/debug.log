@@ -1,0 +1,26 @@
+2026-02-16 17:36:38,953 INFO    MainThread:3649232 [wandb_setup.py:_flush():81] Current SDK version is 0.22.3
+2026-02-16 17:36:38,953 INFO    MainThread:3649232 [wandb_setup.py:_flush():81] Configure stats pid to 3649232
+2026-02-16 17:36:38,953 INFO    MainThread:3649232 [wandb_setup.py:_flush():81] Loading settings from /home/lrk42/.config/wandb/settings
+2026-02-16 17:36:38,953 INFO    MainThread:3649232 [wandb_setup.py:_flush():81] Loading settings from /vast/palmer/home.grace/lrk42/LGW Lab/unitary/LGW-Lab-NLSE/NLSE in PyTorch/wandb/settings
+2026-02-16 17:36:38,953 INFO    MainThread:3649232 [wandb_setup.py:_flush():81] Loading settings from environment variables
+2026-02-16 17:36:38,953 INFO    MainThread:3649232 [wandb_init.py:setup_run_log_directory():706] Logging user logs to runs/beamsplitter-loss-trace/wandb/run-20260216_173638-l4v5csqs/logs/debug.log
+2026-02-16 17:36:38,953 INFO    MainThread:3649232 [wandb_init.py:setup_run_log_directory():707] Logging internal logs to runs/beamsplitter-loss-trace/wandb/run-20260216_173638-l4v5csqs/logs/debug-internal.log
+2026-02-16 17:36:38,953 INFO    MainThread:3649232 [wandb_init.py:init():833] calling init triggers
+2026-02-16 17:36:38,953 INFO    MainThread:3649232 [wandb_init.py:init():838] wandb.init called with sweep_config: {}
+config: {'simulation': {'Lz': '1e-3', 'Nz': 200, 'Lt': 16, 'Nt': 4096, 'N_modes': 500}, 'medium': {'beta2_j': -10, 'beta2_k': -10, 'gamma_j': 1, 'gamma_k': 1}, 'pulse': {'tau': 0.1}, 'training': {'batch_size': 16, 'amplitude_downscale': '1e-1', 'mask_percent': 0.8, 'm': 8, 'w_mse': '1e4', 'w_pen': '1e3', 'lr': '5e-2', 'N_train': 5000, 'loss_fn': 'trace', 'transformation': 'beamsplitter'}, 'plotting': {'plot_percent': 0.3, 'mode_nr': 7}, 'wandb': {'project': 'xpm-identity-operator', 'entity': 'lgwlab', 'name': 'beamsplitter-loss-trace', 'tags': ['trace', 'beamsplitter'], 'notes': 'Training with trace loss function and beamsplitter transformation'}, 'device': {'use_cuda': True, 'device_id': 0}, '_wandb': {}}
+2026-02-16 17:36:38,953 INFO    MainThread:3649232 [wandb_init.py:init():881] starting backend
+2026-02-16 17:36:39,162 INFO    MainThread:3649232 [wandb_init.py:init():884] sending inform_init request
+2026-02-16 17:36:39,173 INFO    MainThread:3649232 [wandb_init.py:init():892] backend started and connected
+2026-02-16 17:36:39,174 INFO    MainThread:3649232 [wandb_init.py:init():962] updated telemetry
+2026-02-16 17:36:39,176 INFO    MainThread:3649232 [wandb_init.py:init():986] communicating run to backend with 90.0 second timeout
+2026-02-16 17:36:39,635 INFO    MainThread:3649232 [wandb_init.py:init():1033] starting run threads in backend
+2026-02-16 17:36:39,811 INFO    MainThread:3649232 [wandb_run.py:_console_start():2506] atexit reg
+2026-02-16 17:36:39,811 INFO    MainThread:3649232 [wandb_run.py:_redirect():2354] redirect: wrap_raw
+2026-02-16 17:36:39,811 INFO    MainThread:3649232 [wandb_run.py:_redirect():2423] Wrapping output streams.
+2026-02-16 17:36:39,811 INFO    MainThread:3649232 [wandb_run.py:_redirect():2446] Redirects installed.
+2026-02-16 17:36:39,816 INFO    MainThread:3649232 [wandb_init.py:init():1073] run started, returning control to user process
+2026-02-16 18:21:46,641 INFO    MainThread:3649232 [wandb_run.py:_finish():2272] finishing run lgwlab/xpm-identity-operator/l4v5csqs
+2026-02-16 18:21:46,642 INFO    MainThread:3649232 [wandb_run.py:_atexit_cleanup():2471] got exitcode: 0
+2026-02-16 18:21:46,642 INFO    MainThread:3649232 [wandb_run.py:_restore():2453] restore
+2026-02-16 18:21:46,642 INFO    MainThread:3649232 [wandb_run.py:_restore():2459] restore done
+2026-02-16 18:21:48,049 INFO    MainThread:3649232 [wandb_run.py:_footer_sync_info():3835] logging synced files

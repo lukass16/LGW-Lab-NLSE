@@ -15009,6 +15009,8 @@
   "final_loss_mse": -0.8389735817909241,
   "final_loss_pen": 0.000373748509446159,
   "final_eval_hg_fidelity": 91.16862164090307,
+  "final_eval_frobenius_norm": 0.0010784126352518797,
+  "final_eval_trace_fidelity": 1.5350199937820435,
   "best_loss": -0.838822066783905,
   "best_iteration": 4945,
   "best_loss_mse": -0.839190661907196,
