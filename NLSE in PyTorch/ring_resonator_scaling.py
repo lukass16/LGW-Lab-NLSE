@@ -27,6 +27,7 @@ from nlse import (
     nonlinear_operator_xpm,
     get_hg_basis,
     time_to_hg,
+    hg_to_time,
     get_energy,
 )
 
@@ -109,7 +110,8 @@ def parse_args():
     sim.add_argument("--Nz", type=int, default=100, help="Number of z steps")
     sim.add_argument("--Lt", type=float, default=3.0, help="Temporal window size")
     sim.add_argument("--Nt", type=int, default=2048, help="Number of temporal points")
-    sim.add_argument("--N_modes", type=int, default=100, help="Number of HG modes")
+    sim.add_argument("--N_modes", type=int, default=100, help="Number of HG modes (strong pulse basis)")
+    sim.add_argument("--B", type=int, default=16, help="Truncated HG basis dimension (weak pulse / loss)")
 
     # Medium parameters
     med = p.add_argument_group("Medium parameters")
@@ -162,6 +164,7 @@ def main():
     # Temporal grid and HG basis
     t = torch.linspace(-args.Lt / 2, args.Lt / 2, args.Nt)
     hg_basis = get_hg_basis(args.N_modes, t, args.tau)
+    hg_basis_B = hg_basis[:args.B]
 
     # Input pulses
     weak_input = gaussian(t, args.tau, args.amplitude)
@@ -170,23 +173,24 @@ def main():
     # Weak pulse from chosen HG mode
     A_j_input = hg_basis[args.mode]
 
-    # Target HG coefficient vector
-    y_hg = torch.zeros(args.N_modes)
+    # Target HG coefficient vector (in truncated basis)
+    y_hg = torch.zeros(args.B)
     y_hg[args.mode] = 1
 
     # -------------------------------------------------------------------
     # Loss & forward
     # -------------------------------------------------------------------
     def loss_function(final_j):
-        """Fidelity loss on HG coefficients (phase-aware)."""
-        final_j_hg = time_to_hg(final_j, hg_basis, dt)
+        """Fidelity loss on HG coefficients (phase-aware, truncated basis)."""
+        final_j_hg = time_to_hg(final_j, hg_basis_B, dt)
         dot_products = torch.sum(final_j_hg.conj() * y_hg)
         fidelity_avg = torch.abs(dot_products) ** 2
         return -fidelity_avg
 
-    def forward(A_k_param, alphas_param):
+    def forward(A_k_coeffs_param, alphas_param):
+        A_k_time = hg_to_time(A_k_coeffs_param, hg_basis)
         A_k_stack = torch.stack(
-            [A_k_param * alphas_param[i] for i in range(args.N_resonator)]
+            [A_k_time * alphas_param[i] for i in range(args.N_resonator)]
         )
         A_j = A_j_input * t_coeff
         for i in range(args.N_resonator):
@@ -201,9 +205,10 @@ def main():
     # -------------------------------------------------------------------
     # Trainable parameters & optimizer
     # -------------------------------------------------------------------
-    A_k = torch.nn.Parameter(strong_input.clone().detach().requires_grad_(True))
+    strong_input_coeffs = time_to_hg(strong_input, hg_basis, dt)
+    A_k_coeffs = torch.nn.Parameter(strong_input_coeffs.clone().detach().requires_grad_(True))
     alphas = torch.nn.Parameter(torch.ones(args.N_resonator).clone().detach().requires_grad_(True))
-    optimizer = torch.optim.Adam([A_k, alphas], lr=args.lr)
+    optimizer = torch.optim.Adam([A_k_coeffs, alphas], lr=args.lr)
 
     # -------------------------------------------------------------------
     # Training loop
@@ -212,7 +217,7 @@ def main():
     print(f"Starting training for {args.N_train} iterations ...")
     for i in tqdm(range(args.N_train), desc="Training"):
         optimizer.zero_grad()
-        A_j_out = forward(A_k, alphas)
+        A_j_out = forward(A_k_coeffs, alphas)
         loss = loss_function(A_j_out)
         loss.backward()
         optimizer.step()
@@ -222,8 +227,9 @@ def main():
 
     # Reconstruct A_k_stack with optimized parameters for plotting
     with torch.no_grad():
+        A_k_optimized = hg_to_time(A_k_coeffs.detach(), hg_basis)
         A_k_stack = torch.stack(
-            [A_k.detach() * alphas[i].detach() for i in range(args.N_resonator)]
+            [A_k_optimized * alphas[i].detach() for i in range(args.N_resonator)]
         )
 
     # -------------------------------------------------------------------
@@ -257,7 +263,27 @@ def main():
         plt.show()
     plt.close(fig)
 
-    # 3. Strong pulse evolution
+    # 3. Optimized HG coefficients of the strong pulse
+    fig, ax = plt.subplots(figsize=(10, 4))
+    init_coeffs = time_to_hg(strong_input, hg_basis, dt).numpy()
+    opt_coeffs = A_k_coeffs.detach().cpu().numpy()
+    mode_indices = np.arange(args.N_modes)
+    ax.stem(mode_indices, np.abs(init_coeffs) ** 2, linefmt="r-", markerfmt="ro",
+            basefmt=" ", label="Initial (soliton)")
+    ax.stem(mode_indices, np.abs(opt_coeffs) ** 2, linefmt="b-", markerfmt="bo",
+            basefmt=" ", label="Optimized")
+    ax.set_xlabel("HG Mode Index")
+    ax.set_ylabel("Coefficient Intensity |c_n|²")
+    ax.set_title("Strong Pulse HG Coefficients: Initial vs Optimized")
+    ax.legend()
+    ax.grid(alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(os.path.join(args.output_dir, "hg_coefficients.png"), dpi=args.dpi)
+    if args.show:
+        plt.show()
+    plt.close(fig)
+
+    # 4. Strong pulse evolution
     fig = plt.figure(figsize=(12, 7), dpi=args.dpi)
     cmap = plt.cm.plasma
     n_pulses = len(A_k_stack)
