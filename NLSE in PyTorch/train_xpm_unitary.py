@@ -701,123 +701,6 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
     return A_j_evolution, A_k_evolution, final_losses, best_iteration, best_loss
 
 
-def save_plots(config, training_setup, A_j_evolution, A_k_evolution, losses, run_dir):
-    """Generate and save all plots."""
-    sim = config['simulation']
-    plot = config['plotting']
-    train = config['training']
-    
-    # Convert simulation parameters to appropriate types
-    Lz = float(sim['Lz'])
-    Nz = int(sim['Nz'])
-    
-    t = training_setup['t']
-    x = training_setup['x']
-    y = training_setup['y']
-    
-    # Calculate plot indices
-    plot_percent = plot['plot_percent']
-    total_points = len(t)
-    center_points = int(total_points * plot_percent)
-    start_idx = (total_points - center_points) // 2
-    end_idx = start_idx + center_points
-    t_center = t[start_idx:end_idx].cpu().numpy()
-    
-    mode_nr = plot['mode_nr']
-    
-    # Create plots directory
-    plots_dir = run_dir / "plots"
-    plots_dir.mkdir(exist_ok=True)
-    
-    # 1. Loss plot
-    plt.figure(figsize=(10, 6))
-    plt.plot(losses['losses'], color='m', marker="o", label='Total Loss', linewidth=2, markersize=4)
-    plt.plot(losses['losses_mse'], color='b', marker="s", label='MSE Loss', linewidth=2, markersize=4)
-    plt.plot(losses['losses_pen'], color='r', marker="^", label='Penalty Loss', linewidth=2, markersize=4)
-    plt.xlabel('Iteration')
-    plt.ylabel('Loss')
-    plt.title('Training Loss Components')
-    plt.legend()
-    plt.grid(True, alpha=0.3)
-    plt.tight_layout()
-    plt.savefig(plots_dir / "training_loss.png", dpi=150, bbox_inches='tight')
-    plt.close()
-    
-    # 3. Intensity evolution plots
-    # Note: plot_intensity_evolution calls plt.show(), but with Agg backend it won't display
-    # We save the figure after the function call
-    plot_intensity_evolution(
-        A_j_evolution[mode_nr, :, :], 
-        t, 
-        Lz, 
-        Nz, 
-        wave_name='Wave j'
-    )
-    # Get the current figure and save it
-    fig = plt.gcf()
-    fig.savefig(plots_dir / "intensity_evolution_wave_j.png", dpi=150, bbox_inches='tight')
-    plt.close(fig)
-    
-    plot_intensity_evolution(
-        A_k_evolution[mode_nr, :, :], 
-        t, 
-        Lz, 
-        Nz, 
-        wave_name='Wave k'
-    )
-    fig = plt.gcf()
-    fig.savefig(plots_dir / "intensity_evolution_wave_k.png", dpi=150, bbox_inches='tight')
-    plt.close(fig)
-    
-    # 4. Co-wave evolution
-    plot_cowave_evolution(
-        A_j_evolution[mode_nr, :, :].detach().clone(),
-        A_k_evolution[mode_nr, :, :].detach().clone(),
-        t,
-        Lz,
-        Nz
-    )
-    fig = plt.gcf()
-    fig.savefig(plots_dir / "cowave_evolution.png", dpi=150, bbox_inches='tight')
-    plt.close(fig)
-    
-    # 5. Target vs Final wave comparison
-    plot_percent_comparison = 0.3
-    center_points_comp = int(total_points * plot_percent_comparison)
-    start_idx_comp = (total_points - center_points_comp) // 2
-    end_idx_comp = start_idx_comp + center_points_comp
-    t_center_comp = t[start_idx_comp:end_idx_comp].cpu().numpy()
-    
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 6))
-    
-    ax1.plot(t_center_comp, np.abs(x[mode_nr].detach().cpu().numpy())[start_idx_comp:end_idx_comp]**2, 
-            'b-', label='Input Wave', linewidth=2)
-    ax1.plot(t_center_comp, np.abs(y[mode_nr].detach().cpu().numpy())[start_idx_comp:end_idx_comp]**2, 
-            'r--', label='Target Wave', linewidth=2)
-    ax1.plot(t_center_comp, np.abs(A_j_evolution[mode_nr, :, -1].detach().cpu().numpy())[start_idx_comp:end_idx_comp]**2, 
-            'g-', label='Final Wave', linewidth=2)
-    ax1.set_xlabel('Time')
-    ax1.set_ylabel('Intensity |A|²')
-    ax1.set_title('Input vs Target vs Final Wave (j)')
-    ax1.legend()
-    ax1.grid()
-    
-    ax2.plot(t_center_comp, np.abs(A_k_evolution[mode_nr, :, 0].detach().cpu().numpy())[start_idx_comp:end_idx_comp]**2, 
-            'b-', label='Strong Input Pulse', linewidth=2)
-    ax2.plot(t_center_comp, np.abs(A_k_evolution[mode_nr, :, -1].detach().cpu().numpy())[start_idx_comp:end_idx_comp]**2, 
-            'g-', label='Strong Output Pulse', linewidth=2)
-    ax2.set_xlabel('Time')
-    ax2.set_ylabel('Intensity |A|²')
-    ax2.set_title('Wave k: Input vs Output')
-    ax2.legend()
-    ax2.grid()
-    
-    plt.tight_layout()
-    plt.savefig(plots_dir / "wave_comparison.png", dpi=150, bbox_inches='tight')
-    plt.close()
-    
-    print(f"\nPlots saved to {plots_dir}")
-
 
 def save_model_parameters(training_setup, run_dir, best_iteration=None, best_loss=None):
     # *somewhat redundant, since the best model is already saved in the checkpoint, but it saves a clean additional numpy copy of the best theta
@@ -1070,10 +953,6 @@ def main():
         use_wandb=not args.no_wandb,
         loss_fn_name=loss_fn
     )
-    
-    # Save plots
-    print("\nGenerating and saving plots...")
-    save_plots(config, training_setup, A_j_evolution, A_k_evolution, losses, run_dir)
     
     # Save model parameters (best model)
     print("\nSaving model parameters...")

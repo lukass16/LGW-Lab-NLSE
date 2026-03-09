@@ -35,7 +35,7 @@ training:
 # Plotting Parameters
 plotting:
   plot_percent: 0.3      # Percentage of central data to show in plots
-  mode_nr: 7             # Mode number to plot for evaluation
+  mode_nr: 0             # Mode number to plot for evaluation
 
 # Wandb Configuration
 wandb:
