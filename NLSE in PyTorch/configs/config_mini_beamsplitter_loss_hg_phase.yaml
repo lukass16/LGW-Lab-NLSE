@@ -1,4 +1,4 @@
-# XPM Beamsplitter Operator Training Configuration - Trace Loss
+# XPM Beamsplitter Operator Training Configuration - HG Phase Loss
 
 # Simulation Parameters
 simulation:
@@ -21,7 +21,7 @@ pulse:
 
 # Training Parameters
 training:
-  batch_size: 16         # Number of modes to simulate (batch size)
+  batch_size: 4         # Number of modes to simulate (batch size)
   amplitude_downscale: 1e-1  # Downscaling factor for input amplitudes
   mask_percent: 0.8      # Size of the unpenalized region in percent of the total temporal window
   m: 8                   # Number of slices to check for penalty
@@ -29,7 +29,7 @@ training:
   w_pen: 1e3             # Penalty loss weight
   lr: 5e-2               # Learning rate
   N_train: 5000         # Number of training iterations
-  loss_fn: trace         # Loss function: basic, hg, normalized_hg, fid_phase, fid_energy, trace, hg_phase
+  loss_fn: hg_phase      # Loss function: basic, hg, normalized_hg, fid_phase, fid_energy, trace, hg_phase
   transformation: beamsplitter   # Transformation: identity, permutation, rotation, arbitrary, or beamsplitter
 
 # Plotting Parameters
@@ -41,9 +41,9 @@ plotting:
 wandb:
   project: "xpm-identity-operator"
   entity: lgwlab           # Set to your wandb entity/username, or null for default
-  name: beamsplitter-loss-trace           # Set to a specific run name, or null for auto-generated
-  tags: ["trace", "beamsplitter"]               # List of tags for this run
-  notes: "Training with trace loss function and beamsplitter transformation"
+  name: mini-beamsplitter-loss-hg-phase           # Set to a specific run name, or null for auto-generated
+  tags: ["hg_phase", "beamsplitter"]               # List of tags for this run
+  notes: "Training with HG phase-aware (complex MSE) loss function and beamsplitter transformation"
 
 # Device Configuration
 device:
