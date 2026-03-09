@@ -1,0 +1,5 @@
+Using device: cuda
+Precomputed 100 HG basis functions on grid of 2048 points on device cpu
+Starting training for 1000 iterations ...
+Final loss: -0.000284
+Plots saved to /vast/palmer/home.grace/lrk42/LGW Lab/unitary/LGW-Lab-NLSE/NLSE in PyTorch/results/ring_resonator_arbitrary
