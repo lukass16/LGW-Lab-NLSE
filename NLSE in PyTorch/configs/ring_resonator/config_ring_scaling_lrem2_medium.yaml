@@ -33,7 +33,7 @@ training:
 
 # Output Parameters
 output:
-  output_dir: runs/ring_scaling_medium
+  output_dir: runs/ring_scaling_lrem2_medium
   dpi: 200
 
 # Wandb Configuration

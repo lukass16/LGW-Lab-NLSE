@@ -15,4 +15,4 @@ module load CUDA
 module load cuDNN
 module load miniconda
 conda activate torch-gpu
-python ring_resonator_scaling_batch.py --config configs/ring_resonator/config_ring_scaling_small.yaml
+python ring_resonator_scaling_batch.py --config configs/ring_resonator/config_ring_scaling_lrem1_medium.yaml
