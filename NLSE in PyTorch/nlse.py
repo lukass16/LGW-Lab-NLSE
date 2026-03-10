@@ -404,6 +404,236 @@ def plot_cowave_evolution(A_j_evolution, A_k_evolution, t, Lz, Nz):
     plt.tight_layout()
     plt.show()
     
+def plot_transformation_matrix(U, transformation_name):
+    """
+    Visualize the transformation matrix U in terms of its magnitude, real, and imaginary parts.
+
+    Args:
+        U: torch.Tensor (complex) transformation matrix.
+        transformation_name: str, name of the transformation to display in titles.
+    """
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+
+    # Magnitude
+    im0 = axes[0].imshow(torch.abs(U).cpu().numpy(), cmap='viridis', aspect='equal')
+    axes[0].set_title(f'|U| (Magnitude)\n{transformation_name}', fontsize=12)
+    axes[0].set_xlabel('Input Mode')
+    axes[0].set_ylabel('Output Mode')
+    plt.colorbar(im0, ax=axes[0])
+
+    # Real part
+    im1 = axes[1].imshow(torch.real(U).cpu().numpy(), cmap='RdBu', aspect='equal', vmin=-1, vmax=1)
+    axes[1].set_title(f'Re(U) (Real Part)\n{transformation_name}', fontsize=12)
+    axes[1].set_xlabel('Input Mode')
+    axes[1].set_ylabel('Output Mode')
+    plt.colorbar(im1, ax=axes[1])
+
+    # Imaginary part
+    im2 = axes[2].imshow(torch.imag(U).cpu().numpy(), cmap='RdBu', aspect='equal', vmin=-1, vmax=1)
+    axes[2].set_title(f'Im(U) (Imaginary Part)\n{transformation_name}', fontsize=12)
+    axes[2].set_xlabel('Input Mode')
+    axes[2].set_ylabel('Output Mode')
+    plt.colorbar(im2, ax=axes[2])
+
+    plt.suptitle(f'Transformation Matrix: {transformation_name}', fontsize=14, fontweight='bold', y=1.02)
+    plt.tight_layout()
+    plt.show()
+
+def plot_mode_comparison(y, t, A_j_evolution, plot_percent=0.3, transformation_name=""):
+    """Create a grid plot showing all modes: target vs final output."""
+    B = y.shape[0]
+
+    # Calculate grid dimensions
+    n_cols = 4
+    n_rows = (B + n_cols - 1) // n_cols
+
+    # Calculate time window for plotting
+    total_points = len(t)
+    center_points = int(total_points * plot_percent)
+    start_idx = (total_points - center_points) // 2
+    end_idx = start_idx + center_points
+    t_plot = t[start_idx:end_idx].cpu().numpy()
+
+    # Get final outputs
+    final_outputs = A_j_evolution[:, :, -1].detach()
+
+    # Create subplot grid
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 4 * n_rows))
+    axes = axes.flatten() if B > 1 else [axes]
+
+    for mode_idx in range(B):
+        ax = axes[mode_idx]
+
+        # Extract data for this mode (use abs for complex values)
+        target_intensity = np.abs(y[mode_idx].detach().cpu().numpy())[start_idx:end_idx] ** 2
+        output_intensity = np.abs(final_outputs[mode_idx].detach().cpu().numpy())[start_idx:end_idx] ** 2
+
+        # Plot target and output
+        ax.plot(t_plot, target_intensity, 'r--', linewidth=2, label='Target', alpha=0.7)
+        ax.plot(t_plot, output_intensity, 'b-', linewidth=2, label='Output', alpha=0.8)
+
+        # Calculate and display MSE
+        mse = np.mean((target_intensity - output_intensity) ** 2)
+        ax.set_title(f'Mode {mode_idx}\nMSE: {mse:.2e}', fontsize=10)
+        ax.set_xlabel('Time', fontsize=9)
+        ax.set_ylabel('Intensity |A|²', fontsize=9)
+        ax.legend(fontsize=8)
+        ax.grid(True, alpha=0.3)
+
+    # Hide unused axes
+    for idx in range(B, len(axes)):
+        axes[idx].set_visible(False)
+
+    plt.suptitle(f'Target vs Final Output for All {B} Modes\nTransformation: {transformation_name}',
+                 fontsize=14, y=0.995)
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_mode_comparison_hg(y, A_j_evolution, hg_basis, dt, num_modes=None, transformation_name=""):
+    """
+    Show a mode-by-mode comparison of the TARGET and OUTPUT in the HG basis (as |coeff|^2),
+    using a grid plot (4x4) where each subplot shows a single mode: target (red) vs output (blue).
+    """
+    # y: (B, Nt), A_j_evolution: (B, Nt, Nz+1)
+    B = y.shape[0]
+    if num_modes is None:
+        num_modes = B
+
+    # Calculate grid dimensions
+    n_cols = 4
+    n_rows = (B + n_cols - 1) // n_cols
+
+    # Compute coefficients
+    coeff_target = []
+    coeff_output = []
+    for mode_idx in range(B):
+        c_target = time_to_trunc_hg(y[mode_idx].detach(), hg_basis, dt, num_modes).cpu().numpy()
+        c_output = time_to_trunc_hg(A_j_evolution[mode_idx, :, -1].detach(), hg_basis, dt, num_modes).cpu().numpy()
+        coeff_target.append(c_target)
+        coeff_output.append(c_output)
+    coeff_target = np.stack(coeff_target)  # (B, num_modes)
+    coeff_output = np.stack(coeff_output)  # (B, num_modes)
+
+    # Prepare subplot grid
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 4 * n_rows))
+    axes = axes.flatten() if B > 1 else [axes]
+
+    # Plot for each mode its HG coefficient stem plots (target vs output)
+    mode_indices = np.arange(num_modes)
+    for mode_idx in range(B):
+        ax = axes[mode_idx]
+        ct = np.abs(coeff_target[mode_idx])**2
+        co = np.abs(coeff_output[mode_idx])**2
+        ax.stem(mode_indices, ct, basefmt=' ', linefmt='r-', markerfmt='ro', label='Target')
+        ax.stem(mode_indices, co, basefmt=' ', linefmt='b-', markerfmt='bo', label='Output')
+        # Compute MSE for this mode in HG coef
+        mse_hg = np.mean(co - ct)
+        ax.set_title(f"Mode {mode_idx}\nHG Intensity MSE: {mse_hg:.2e}", fontsize=10)
+        ax.set_xlabel("Truncated HG Mode n", fontsize=9)
+        ax.set_ylabel("|cₙ|²", fontsize=9)
+        ax.set_ylim(bottom=0)
+        ax.grid(True, alpha=0.3)
+        ax.legend(fontsize=8)
+
+    # Hide unused axes
+    for idx in range(B, len(axes)):
+        axes[idx].set_visible(False)
+
+    plt.suptitle(f"Target vs Output HG Coefficient Intensities\nfor All {B} Modes (Transformation: {transformation_name})", fontsize=14, y=0.995)
+    plt.tight_layout()
+    plt.show()
+    
+    
+def plot_mode_hg_coeffs(y, A_j_evolution, hg_basis, dt, num_modes=None, threshold_percent = 0.5, transformation_name=""):
+    # y: (B, Nt), A_j_evolution: (B, Nt, Nz+1)
+    B = y.shape[0]
+    if num_modes is None:
+        num_modes = B
+
+    coeff_target = []
+    coeff_output = []
+    for mode_idx in range(B):
+        c_target = time_to_trunc_hg(y[mode_idx].detach(), hg_basis, dt, num_modes).cpu().numpy()
+        c_output = time_to_trunc_hg(A_j_evolution[mode_idx, :, -1].detach(), hg_basis, dt, num_modes).cpu().numpy()
+        coeff_target.append(c_target)
+        coeff_output.append(c_output)
+    coeff_target = np.stack(coeff_target)  # (B, num_modes) — row i = output coefficients for input mode i
+    coeff_output = np.stack(coeff_output)  # (B, num_modes)
+
+    coeff_indices = np.arange(num_modes)
+    colors = plt.cm.tab20(np.arange(B))
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+    # --- Magnitude plot ---
+    ax1 = axes[0]
+    for i in range(B):
+        row_max = np.max(np.abs(coeff_target[i, :]))
+        if row_max == 0:
+            continue
+        significant = np.abs(coeff_target[i, :]) > threshold_percent * row_max #* note: filtering is based on target coefficients
+        js = coeff_indices[significant]
+
+        ax1.scatter(js, np.abs(coeff_target[i, js]), s=60, c=[colors[i]], marker='o', alpha=0.7)
+        ax1.scatter(js, np.abs(coeff_output[i, js]), s=60, c=[colors[i]], marker='x', alpha=0.7)
+
+    ax1.set_xlabel('HG Coefficient Index j')
+    ax1.set_ylabel('Coefficient Magnitude')
+    ax1.set_title('Magnitude (color = input mode i, x-pos = coeff j)')
+    ax1.set_ylim(bottom=0)
+    ax1.grid(True, alpha=0.3)
+    ax1.set_xticks(coeff_indices)
+
+    legend_elements = [
+        plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='gray', label='Target', markersize=8, alpha=0.7),
+        plt.Line2D([0], [0], marker='x', color='w', markerfacecolor='gray', markeredgecolor='gray', label='Output', markersize=8, alpha=0.7),
+    ] + [
+        plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=colors[i], label=f'mode {i}', markersize=8)
+        for i in range(B)
+    ]
+    ax1.legend(handles=legend_elements, fontsize=8, ncol=2)
+
+    # --- Phase plot ---
+    ax2 = axes[1]
+    target_phase = np.angle(coeff_target)
+    output_phase = np.angle(coeff_output)
+
+    for i in range(B):
+        row_max = np.max(np.abs(coeff_target[i, :]))
+        if row_max == 0:
+            continue
+        significant = np.abs(coeff_target[i, :]) > 0.5 * row_max
+        js = coeff_indices[significant]
+
+        ax2.scatter(js, target_phase[i, js], s=60, c=[colors[i]], marker='o', alpha=0.7)
+        ax2.scatter(js, output_phase[i, js], s=60, c=[colors[i]], marker='x', alpha=0.7)
+
+    ax2.set_xlabel('HG Coefficient Index j')
+    ax2.set_ylabel('Phase (radians)')
+    ax2.set_title('Phase (color = input mode i, x-pos = coeff j)')
+    ax2.grid(True, alpha=0.3)
+    ax2.set_xticks(coeff_indices)
+
+    legend_elements_phase = [
+        plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='gray', label='Target', markersize=8, alpha=0.7),
+        plt.Line2D([0], [0], marker='x', color='w', markerfacecolor='gray', markeredgecolor='gray', label='Output', markersize=8, alpha=0.7),
+    ] + [
+        plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=colors[i], label=f'mode {i}', markersize=8)
+        for i in range(B)
+    ]
+    ax2.legend(handles=legend_elements_phase, fontsize=8, ncol=2)
+
+    plt.suptitle(f'HG Coefficient Comparison - {transformation_name}', fontsize=13, fontweight='bold')
+    plt.tight_layout()
+    plt.show()
+
+    coeff_error = np.abs(coeff_target - coeff_output)
+    print(f"\nHG Coefficient Error Metrics:")
+    print(f"  Mean coefficient error: {coeff_error.mean().item():.2e}")
+    print(f"  Max coefficient error: {coeff_error.max().item():.2e}")
+
+    
 
 """ Hermite-Gauss HG Basis Operations"""
 
