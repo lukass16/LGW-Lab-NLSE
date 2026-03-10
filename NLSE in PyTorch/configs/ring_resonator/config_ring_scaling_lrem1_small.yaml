@@ -1,0 +1,45 @@
+# Ring Resonator Scaled-Amplitude Training — SMALL ring (1cm)
+# Script: ring_resonator_scaling_batch.py
+
+# Simulation Parameters
+simulation:
+  Lz: 1e-5               # Propagation distance per loop (1 cm)
+  Nz: 10                  # Number of z steps per loop
+  Lt: 3.0                 # Temporal window size
+  Nt: 2048                # Number of temporal points
+  N_modes: 100            # Number of HG modes for strong-pulse basis
+  B: 16                   # Truncated HG basis dimension (weak pulse / loss)
+
+# Medium Parameters
+medium:
+  beta2_j: -10            # GVD for weak wave (anomalous)
+  beta2_k: -10            # GVD for strong wave (anomalous)
+  gamma_j: 1              # Nonlinearity for weak wave
+  gamma_k: 1              # Nonlinearity for strong wave
+
+# Pulse / Resonator Parameters
+pulse:
+  tau: 0.1                # Pulse temporal width (also HG basis scale)
+  R: 0.4                  # Ring resonator reflectivity
+  amplitude: 0.32         # Weak input (Gaussian) amplitude
+  N_resonator: 100        # Number of resonator loops
+
+# Training Parameters
+training:
+  num_modes: 8            # Number of HG modes to train on (batch size)
+  N_train: 5000           # Number of training iterations
+  lr: 1e-1               # Learning rate
+  loss_fn: fidelity       # Loss function: fidelity or trace
+
+# Output Parameters
+output:
+  output_dir: runs/ring_scaling_lrem1_small
+  dpi: 200
+
+# Wandb Configuration
+wandb:
+  project: "ring-resonator"
+  entity: lgwlab
+  name: ring-scaling-lrem1-small
+  tags: ["scaling", "fidelity", "ring-resonator", "small"]
+  notes: "Small ring (Lz=1e-5, 1cm), Nz=10, N_resonator=100"
