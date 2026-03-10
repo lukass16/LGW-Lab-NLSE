@@ -24,7 +24,7 @@ training:
   transformation: identity
 plotting:
   plot_percent: 0.3
-  mode_nr: 7
+  mode_nr: 0
 wandb:
   project: xpm-identity-operator
   entity: lgwlab
