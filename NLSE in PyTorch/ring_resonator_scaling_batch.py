@@ -16,6 +16,7 @@ Usage:
 """
 
 import argparse
+import json
 import os
 
 import yaml
@@ -26,6 +27,13 @@ from tqdm import tqdm
 
 import torch
 import torch.nn.functional as F
+
+try:
+    import wandb
+    WANDB_AVAILABLE = True
+except ImportError:
+    WANDB_AVAILABLE = False
+    print("Warning: wandb not available. Logging will be disabled.")
 
 from nlse import (
     split_step_fourier_xpm_batch,
@@ -67,15 +75,15 @@ def beam_splitter(a, d, r, t_coeff):
 # Argument parser
 # ---------------------------------------------------------------------------
 
-def _load_config_defaults(config_path):
-    """Load a YAML config and flatten all sections into a single dict."""
+def _load_config(config_path):
+    """Load a YAML config. Returns (flat_dict, raw_config)."""
     with open(config_path) as f:
         cfg = yaml.safe_load(f)
     flat = {}
     for section in cfg.values():
         if isinstance(section, dict):
             flat.update(section)
-    return flat
+    return flat, cfg
 
 
 def parse_args():
@@ -128,14 +136,18 @@ def parse_args():
     out.add_argument("--show", action="store_true",
                      help="Show plots interactively (off by default for cluster use)")
     out.add_argument("--dpi", type=int, default=200, help="DPI for saved figures")
+    out.add_argument("--no_wandb", action="store_true", help="Disable wandb logging")
 
     # Override argparse defaults with config values (CLI flags still win)
+    raw_config = {}
     if pre_args.config:
-        cfg_defaults = _load_config_defaults(pre_args.config)
+        cfg_defaults, raw_config = _load_config(pre_args.config)
         p.set_defaults(**cfg_defaults)
         print(f"Loaded config from {pre_args.config}")
 
-    return p.parse_args()
+    args = p.parse_args()
+    args._raw_config = raw_config
+    return args
 
 
 # ---------------------------------------------------------------------------
@@ -247,9 +259,29 @@ def main():
     optimizer = torch.optim.Adam([A_k_coeffs, alphas], lr=args.lr)
 
     # -------------------------------------------------------------------
+    # Wandb initialisation
+    # -------------------------------------------------------------------
+    use_wandb = not args.no_wandb
+    if use_wandb and WANDB_AVAILABLE:
+        wandb_cfg = args._raw_config.get("wandb", {})
+        wandb.init(
+            project=wandb_cfg.get("project", "ring-resonator"),
+            entity=wandb_cfg.get("entity"),
+            name=wandb_cfg.get("name"),
+            tags=wandb_cfg.get("tags", []),
+            notes=wandb_cfg.get("notes", ""),
+            config=vars(args),
+            dir=args.output_dir,
+        )
+    elif use_wandb and not WANDB_AVAILABLE:
+        print("Warning: wandb requested but not available. Continuing without wandb.")
+        use_wandb = False
+
+    # -------------------------------------------------------------------
     # Training loop
     # -------------------------------------------------------------------
     losses = []
+    best_loss = float("inf")
     print(f"Training on modes 0..{num_modes - 1} (batch size = {num_modes})")
     print(f"Starting training for {args.N_train} iterations ...")
     for i in tqdm(range(args.N_train), desc="Training"):
@@ -258,7 +290,31 @@ def main():
         loss = loss_function(A_j_out)
         loss.backward()
         optimizer.step()
-        losses.append(loss.item())
+
+        loss_val = loss.item()
+        losses.append(loss_val)
+        if loss_val < best_loss:
+            best_loss = loss_val
+
+        # Periodic eval + wandb logging
+        with torch.no_grad():
+            out_hg = _final_hg(A_j_out)
+            dots = torch.sum(out_hg.conj() * y_hg, dim=1)
+            avg_fidelity = torch.mean(torch.abs(dots) ** 2).item()
+            trace_fid = (torch.abs(torch.sum(dots) / num_modes) ** 2).item()
+
+        if use_wandb and WANDB_AVAILABLE:
+            wandb.log({
+                "iteration": i,
+                "loss": loss_val,
+                "best_loss": best_loss,
+                "avg_fidelity": avg_fidelity,
+                "trace_fidelity": trace_fid,
+            })
+
+        if (i + 1) % max(1, args.N_train // 10) == 0:
+            print(f"  Iter {i+1}/{args.N_train}: loss={loss_val:.6f}, "
+                  f"avg_fid={avg_fidelity:.6f}, trace_fid={trace_fid:.6f}")
 
     print(f"Final loss: {losses[-1]:.6f}")
 
@@ -283,6 +339,23 @@ def main():
     for m in range(num_modes):
         print(f"  Mode {m}: {per_mode_fid[m].item():.6f}")
     print(f"  Average : {per_mode_fid.mean().item():.6f}")
+
+    # Save losses to JSON
+    losses_path = os.path.join(args.output_dir, "losses.json")
+    with open(losses_path, "w") as f:
+        json.dump({"losses": losses, "final_loss": losses[-1],
+                   "best_loss": best_loss,
+                   "per_mode_fidelity": per_mode_fid.cpu().tolist()}, f, indent=2)
+
+    # Save checkpoint for later analysis
+    checkpoint_path = os.path.join(args.output_dir, "checkpoint.pt")
+    torch.save({
+        "scenario": "scaling",
+        "A_k_coeffs": A_k_coeffs.detach().cpu(),
+        "alphas": alphas.detach().cpu(),
+        "args": {k: v for k, v in vars(args).items() if k != "_raw_config"},
+    }, checkpoint_path)
+    print(f"Checkpoint saved to {checkpoint_path}")
 
     # -------------------------------------------------------------------
     # Plotting
@@ -371,6 +444,15 @@ def main():
     plt.savefig(os.path.join(args.output_dir, "mode_hg_coeffs.png"),
                 dpi=args.dpi, bbox_inches="tight")
     plt.close("all")
+
+    # Log final metrics and finish wandb
+    if use_wandb and WANDB_AVAILABLE:
+        wandb.log({
+            "final_loss": losses[-1],
+            "best_loss": best_loss,
+            "final_avg_fidelity": per_mode_fid.mean().item(),
+        })
+        wandb.finish()
 
     print(f"Plots saved to {os.path.abspath(args.output_dir)}")
 

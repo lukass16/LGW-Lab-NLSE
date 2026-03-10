@@ -9,6 +9,8 @@
 #SBATCH --partition=gpu
 #SBATCH --time=6:00:00
 
+export WANDB_API_KEY=fa6aa2781732fe60c4a13ca88d919b7f56360fd8
+
 module load CUDA
 module load cuDNN
 module load miniconda
