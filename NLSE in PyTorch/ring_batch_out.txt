@@ -1,6 +1,6 @@
 Using device: cuda
-Loaded config from configs/ring_resonator/config_ring_scaling_lrem1_medium.yaml
+Loaded config from configs/ring_resonator/config_ring_scaling_trace_large.yaml
 Precomputed 100 HG basis functions on grid of 2048 points on device cpu
-Using loss function: fidelity
+Using loss function: trace
 Training on modes 0..7 (batch size = 8)
-Starting training for 5000 iterations ...
+Starting training for 1000 iterations ...

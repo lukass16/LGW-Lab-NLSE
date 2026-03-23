@@ -1,3 +1,5 @@
 /NLSE in PyTorch/runs
 NLSE in PyTorch/trainjoberr_gpu.txt
 NLSE in PyTorch/trainjobout_gpu.txt
+NLSE in PyTorch/ring_batch_err.txt
+NLSE in PyTorch/ring_batch_out.txt
