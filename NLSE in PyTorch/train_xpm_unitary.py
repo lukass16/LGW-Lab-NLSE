@@ -570,6 +570,17 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
     optimizer = training_setup['optimizer']
     scheduler = training_setup['scheduler']
     
+    # Curriculum learning: trace loss first, then hg_phase loss
+    curriculum_learning = bool(train.get('curriculum_learning', False))
+    if curriculum_learning:
+        curriculum_switch = float(train.get('curriculum_switch', 0.8))
+        switch_iter = int(train['N_train'] * curriculum_switch)
+        loss_fn_phase1 = training_setup['trace_loss_function']
+        loss_fn_phase2 = training_setup['hg_phase_loss_function']
+        loss_function = loss_fn_phase1
+        print(f"Curriculum learning enabled: trace loss for iters 0-{switch_iter}, "
+              f"hg_phase loss for iters {switch_iter}-{train['N_train']}")
+    
     # Initialize wandb if requested and available
     if use_wandb and WANDB_AVAILABLE:
         wandb_config = config.get('wandb', {})
@@ -602,6 +613,25 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
     
     print(f"\nStarting training for {train['N_train']} iterations...")
     for i in tqdm(range(train['N_train']), desc="Training"):
+        if curriculum_learning and i == switch_iter:
+            loss_function = loss_fn_phase2
+            curriculum_opt = train.get('curriculum_optimizer', train.get('optimizer', 'adam')).lower()
+            current_opt = 'lbfgs' if is_lbfgs else type(optimizer).__name__.lower()
+            if curriculum_opt != current_opt:
+                lr = float(train['lr'])
+                theta = training_setup['theta']
+                if curriculum_opt == 'adam':
+                    optimizer = torch.optim.Adam([theta], lr=lr)
+                elif curriculum_opt == 'sgd':
+                    optimizer = torch.optim.SGD([theta], lr=lr)
+                elif curriculum_opt == 'lbfgs':
+                    optimizer = torch.optim.LBFGS([theta], lr=lr, max_iter=20, history_size=10)
+                is_lbfgs = isinstance(optimizer, torch.optim.LBFGS)
+                tqdm.write(f"[Curriculum] Switching to hg_phase loss + {curriculum_opt} optimizer at iteration {i}")
+            else:
+                optimizer.state.clear()
+                tqdm.write(f"[Curriculum] Switching to hg_phase loss at iteration {i} (optimizer state reset)")
+        
         if is_lbfgs:
             def closure():
                 optimizer.zero_grad()
