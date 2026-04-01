@@ -31,6 +31,7 @@ training:
   N_train: 5000         # Number of training iterations
   loss_fn: trace         # Loss function: basic, hg, normalized_hg, fid_phase, fid_energy, trace, hg_phase
   transformation: identity         # Transformation: identity, permutation, rotation, or arbitrary
+  optimizer: adam         # Optimizer: adam, sgd, lbfgs
 
 # Plotting Parameters
 plotting:

@@ -432,10 +432,19 @@ def setup_training(config, device, transformation_name='identity'):
         )
     
     # Initialize optimizer
-    optimizer = torch.optim.Adam([theta], lr=lr)
+    optimizer_name = train.get('optimizer', 'adam').lower()
+    if optimizer_name == 'adam':
+        optimizer = torch.optim.Adam([theta], lr=lr)
+    elif optimizer_name == 'sgd':
+        optimizer = torch.optim.SGD([theta], lr=lr)
+    elif optimizer_name == 'lbfgs':
+        optimizer = torch.optim.LBFGS([theta], lr=lr, max_iter=20, history_size=10)
+    else:
+        raise ValueError(f"Unknown optimizer: '{optimizer_name}'. Valid options: adam, sgd, lbfgs")
     
     print(f"Optimizing HG basis coefficient theta of size {theta.shape[0]}")
     print(f"Training for transformation: {transformation_name}")
+    print(f"Using optimizer: {optimizer_name}")
     
     return {
         't': t,
@@ -572,14 +581,36 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
     checkpoint_dir = run_dir / "checkpoints"
     checkpoint_dir.mkdir(exist_ok=True)
     
+    is_lbfgs = isinstance(optimizer, torch.optim.LBFGS)
+    
     print(f"\nStarting training for {train['N_train']} iterations...")
     for i in tqdm(range(train['N_train']), desc="Training"):
-        optimizer.zero_grad()
-        A_j_evolution, A_k_evolution = forward(theta, hg_basis)
-        loss_mse, loss_pen = loss_function(A_j_evolution, A_k_evolution)
-        loss = loss_mse + loss_pen
-        loss.backward()
-        optimizer.step()
+        if is_lbfgs:
+            def closure():
+                optimizer.zero_grad()
+                A_j_evo, A_k_evo = forward(theta, hg_basis)
+                l_mse, l_pen = loss_function(A_j_evo, A_k_evo)
+                l = l_mse + l_pen
+                l.backward()
+                closure.A_j_evolution = A_j_evo
+                closure.A_k_evolution = A_k_evo
+                closure.loss_mse = l_mse
+                closure.loss_pen = l_pen
+                closure.loss = l
+                return l
+            optimizer.step(closure)
+            A_j_evolution = closure.A_j_evolution
+            A_k_evolution = closure.A_k_evolution
+            loss_mse = closure.loss_mse
+            loss_pen = closure.loss_pen
+            loss = closure.loss
+        else:
+            optimizer.zero_grad()
+            A_j_evolution, A_k_evolution = forward(theta, hg_basis)
+            loss_mse, loss_pen = loss_function(A_j_evolution, A_k_evolution)
+            loss = loss_mse + loss_pen
+            loss.backward()
+            optimizer.step()
         
         # Save losses
         loss_mse_val = loss_mse.item()
