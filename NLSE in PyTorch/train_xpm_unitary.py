@@ -442,9 +442,24 @@ def setup_training(config, device, transformation_name='identity'):
     else:
         raise ValueError(f"Unknown optimizer: '{optimizer_name}'. Valid options: adam, sgd, lbfgs")
     
+    # Initialize learning rate scheduler
+    schedule_name = train.get('learning_schedule', 'none').lower()
+    scheduler = None
+    if schedule_name == 'cosine_warm_restarts':
+        T_0 = int(train.get('schedule_T0', 50))
+        T_mult = int(train.get('schedule_T_mult', 2))
+        eta_min = float(train.get('schedule_eta_min', 0))
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+            optimizer, T_0=T_0, T_mult=T_mult, eta_min=eta_min
+        )
+    elif schedule_name != 'none':
+        raise ValueError(f"Unknown learning_schedule: '{schedule_name}'. Valid options: none, cosine_warm_restarts")
+    
     print(f"Optimizing HG basis coefficient theta of size {theta.shape[0]}")
     print(f"Training for transformation: {transformation_name}")
     print(f"Using optimizer: {optimizer_name}")
+    if scheduler is not None:
+        print(f"Using learning schedule: {schedule_name} (T_0={T_0}, T_mult={T_mult}, eta_min={eta_min})")
     
     return {
         't': t,
@@ -468,6 +483,7 @@ def setup_training(config, device, transformation_name='identity'):
         'hg_phase_loss_function': hg_phase_loss_function,
         'forward': forward,
         'optimizer': optimizer,
+        'scheduler': scheduler,
         'dz': dz,
         'dt': dt
     }
@@ -552,6 +568,7 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
     
     forward = training_setup['forward']
     optimizer = training_setup['optimizer']
+    scheduler = training_setup['scheduler']
     
     # Initialize wandb if requested and available
     if use_wandb and WANDB_AVAILABLE:
@@ -612,6 +629,9 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
             loss.backward()
             optimizer.step()
         
+        if scheduler is not None:
+            scheduler.step()
+        
         # Save losses
         loss_mse_val = loss_mse.item()
         loss_pen_val = loss_pen.item()
@@ -657,6 +677,7 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
         
         # Log to wandb
         if use_wandb and WANDB_AVAILABLE:
+            current_lr = optimizer.param_groups[0]['lr']
             wandb.log({
                 'iteration': i,
                 'loss': loss_val,
@@ -666,6 +687,7 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
                 'eval_hg_fidelity': eval_hg_fidelity,
                 'eval_frobenius_norm': eval_frob,
                 'eval_trace_fidelity': eval_trace,
+                'learning_rate': current_lr,
             })
         
         # Print progress every few iterations
