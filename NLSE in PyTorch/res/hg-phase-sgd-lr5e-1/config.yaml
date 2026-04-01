@@ -1,0 +1,41 @@
+simulation:
+  Lz: 1e-3
+  Nz: 200
+  Lt: 16
+  Nt: 4096
+  N_modes: 500
+medium:
+  beta2_j: -10
+  beta2_k: -10
+  gamma_j: 1
+  gamma_k: 1
+pulse:
+  tau: 0.1
+training:
+  batch_size: 16
+  amplitude_downscale: 1e-1
+  mask_percent: 0.8
+  m: 8
+  w_mse: 1e4
+  w_pen: 1e3
+  lr: 5e-1
+  N_train: 5000
+  loss_fn: hg_phase
+  transformation: identity
+  optimizer: sgd
+plotting:
+  plot_percent: 0.3
+  mode_nr: 7
+wandb:
+  project: xpm-identity-operator
+  entity: lgwlab
+  name: hg-phase-sgd-lr5e-1
+  tags:
+  - hg_phase
+  - identity
+  - sgd
+  - lr5e-1
+  notes: HG phase loss, SGD optimizer, lr=5e-1
+device:
+  use_cuda: true
+  device_id: 0

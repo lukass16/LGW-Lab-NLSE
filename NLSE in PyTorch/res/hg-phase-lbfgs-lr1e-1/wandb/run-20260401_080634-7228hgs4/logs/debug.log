@@ -1,0 +1,21 @@
+2026-04-01 08:06:34,220 INFO    MainThread:3472449 [wandb_setup.py:_flush():81] Current SDK version is 0.22.3
+2026-04-01 08:06:34,220 INFO    MainThread:3472449 [wandb_setup.py:_flush():81] Configure stats pid to 3472449
+2026-04-01 08:06:34,220 INFO    MainThread:3472449 [wandb_setup.py:_flush():81] Loading settings from /home/lrk42/.config/wandb/settings
+2026-04-01 08:06:34,220 INFO    MainThread:3472449 [wandb_setup.py:_flush():81] Loading settings from /home/lrk42/LGW-Lab-NLSE/NLSE in PyTorch/wandb/settings
+2026-04-01 08:06:34,220 INFO    MainThread:3472449 [wandb_setup.py:_flush():81] Loading settings from environment variables
+2026-04-01 08:06:34,220 INFO    MainThread:3472449 [wandb_init.py:setup_run_log_directory():706] Logging user logs to runs/hg-phase-lbfgs-lr1e-1/wandb/run-20260401_080634-7228hgs4/logs/debug.log
+2026-04-01 08:06:34,220 INFO    MainThread:3472449 [wandb_init.py:setup_run_log_directory():707] Logging internal logs to runs/hg-phase-lbfgs-lr1e-1/wandb/run-20260401_080634-7228hgs4/logs/debug-internal.log
+2026-04-01 08:06:34,220 INFO    MainThread:3472449 [wandb_init.py:init():833] calling init triggers
+2026-04-01 08:06:34,220 INFO    MainThread:3472449 [wandb_init.py:init():838] wandb.init called with sweep_config: {}
+config: {'simulation': {'Lz': '1e-3', 'Nz': 200, 'Lt': 16, 'Nt': 4096, 'N_modes': 500}, 'medium': {'beta2_j': -10, 'beta2_k': -10, 'gamma_j': 1, 'gamma_k': 1}, 'pulse': {'tau': 0.1}, 'training': {'batch_size': 16, 'amplitude_downscale': '1e-1', 'mask_percent': 0.8, 'm': 8, 'w_mse': '1e4', 'w_pen': '1e3', 'lr': '1e-1', 'N_train': 5000, 'loss_fn': 'hg_phase', 'transformation': 'identity', 'optimizer': 'lbfgs'}, 'plotting': {'plot_percent': 0.3, 'mode_nr': 7}, 'wandb': {'project': 'xpm-identity-operator', 'entity': 'lgwlab', 'name': 'hg-phase-lbfgs-lr1e-1', 'tags': ['hg_phase', 'identity', 'lbfgs', 'lr1e-1'], 'notes': 'HG phase loss, L-BFGS optimizer, lr=1e-1'}, 'device': {'use_cuda': True, 'device_id': 0}, '_wandb': {}}
+2026-04-01 08:06:34,220 INFO    MainThread:3472449 [wandb_init.py:init():881] starting backend
+2026-04-01 08:06:34,443 INFO    MainThread:3472449 [wandb_init.py:init():884] sending inform_init request
+2026-04-01 08:06:34,455 INFO    MainThread:3472449 [wandb_init.py:init():892] backend started and connected
+2026-04-01 08:06:34,456 INFO    MainThread:3472449 [wandb_init.py:init():962] updated telemetry
+2026-04-01 08:06:34,475 INFO    MainThread:3472449 [wandb_init.py:init():986] communicating run to backend with 90.0 second timeout
+2026-04-01 08:06:35,152 INFO    MainThread:3472449 [wandb_init.py:init():1033] starting run threads in backend
+2026-04-01 08:06:35,369 INFO    MainThread:3472449 [wandb_run.py:_console_start():2506] atexit reg
+2026-04-01 08:06:35,370 INFO    MainThread:3472449 [wandb_run.py:_redirect():2354] redirect: wrap_raw
+2026-04-01 08:06:35,370 INFO    MainThread:3472449 [wandb_run.py:_redirect():2423] Wrapping output streams.
+2026-04-01 08:06:35,370 INFO    MainThread:3472449 [wandb_run.py:_redirect():2446] Redirects installed.
+2026-04-01 08:06:35,377 INFO    MainThread:3472449 [wandb_init.py:init():1073] run started, returning control to user process
