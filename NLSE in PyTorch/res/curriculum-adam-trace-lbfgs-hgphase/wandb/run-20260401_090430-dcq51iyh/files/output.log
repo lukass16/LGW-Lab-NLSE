@@ -1,0 +1,16 @@
+
+Starting training for 5000 iterations...
+Training: 100%|██████████| 5000/5000 [1:17:38<00:00,  1.07it/s]
+Iteration 500/5000: Loss=-0.387641, MSE=-0.387641, Pen=0.000000, Best=-0.387641 (iter 500)
+Iteration 1000/5000: Loss=-0.393378, MSE=-0.393378, Pen=0.000000, Best=-0.393378 (iter 1000)
+Iteration 1500/5000: Loss=-0.396367, MSE=-0.396367, Pen=0.000000, Best=-0.396367 (iter 1500)
+Iteration 2000/5000: Loss=-0.396540, MSE=-0.396540, Pen=0.000000, Best=-0.396540 (iter 2000)
+Iteration 2500/5000: Loss=-0.396793, MSE=-0.396809, Pen=0.000016, Best=-0.396794 (iter 2498)
+Iteration 3000/5000: Loss=-0.397010, MSE=-0.397026, Pen=0.000015, Best=-0.397010 (iter 3000)
+Iteration 3500/5000: Loss=-0.397156, MSE=-0.397168, Pen=0.000012, Best=-0.397156 (iter 3499)
+Iteration 4000/5000: Loss=-0.397298, MSE=-0.397310, Pen=0.000012, Best=-0.397298 (iter 4000)
+[Curriculum] Switching to hg_phase loss + lbfgs optimizer at iteration 4000
+Iteration 4500/5000: Loss=2.721101, MSE=2.720788, Pen=0.000313, Best=-0.397298 (iter 4000)
+Iteration 5000/5000: Loss=2.720418, MSE=2.720119, Pen=0.000299, Best=-0.397298 (iter 4000)
+
+Restoring best model from iteration 4000 (loss=-0.397298)

@@ -1,0 +1,44 @@
+simulation:
+  Lz: 1e-3
+  Nz: 200
+  Lt: 16
+  Nt: 4096
+  N_modes: 500
+medium:
+  beta2_j: -10
+  beta2_k: -10
+  gamma_j: 1
+  gamma_k: 1
+pulse:
+  tau: 0.1
+training:
+  batch_size: 16
+  amplitude_downscale: 1e-1
+  mask_percent: 0.8
+  m: 8
+  w_mse: 1e4
+  w_pen: 1e3
+  lr: 5e-2
+  N_train: 5000
+  loss_fn: hg_phase
+  transformation: identity
+  optimizer: adam
+  curriculum_learning: true
+  curriculum_switch: 0.8
+plotting:
+  plot_percent: 0.3
+  mode_nr: 7
+wandb:
+  project: xpm-identity-operator
+  entity: lgwlab
+  name: curriculum-adam-trace-adam-hgphase
+  tags:
+  - curriculum
+  - identity
+  - adam
+  - trace
+  - hg_phase
+  notes: 'Curriculum learning: Adam+trace (80%) then Adam+hg_phase (20%)'
+device:
+  use_cuda: true
+  device_id: 0

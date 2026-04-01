@@ -15,5 +15,5 @@ module load CUDA
 module load cuDNN
 module load miniconda
 conda activate torch-gpu
-python train_xpm_unitary.py --config configs/hg-loss/adam_trace_lbfgs_hgphase.yaml
+python train_xpm_unitary.py --config configs/hg-loss/lbfgs_full_short.yaml
 

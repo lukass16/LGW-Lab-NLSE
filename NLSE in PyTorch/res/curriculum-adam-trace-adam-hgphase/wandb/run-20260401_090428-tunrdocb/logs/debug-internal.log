@@ -1,0 +1,12 @@
+{"time":"2026-04-01T09:04:28.553326884-04:00","level":"INFO","msg":"stream: starting","core version":"0.22.3"}
+{"time":"2026-04-01T09:04:28.781080335-04:00","level":"INFO","msg":"stream: created new stream","id":"tunrdocb"}
+{"time":"2026-04-01T09:04:28.781180763-04:00","level":"INFO","msg":"handler: started","stream_id":"tunrdocb"}
+{"time":"2026-04-01T09:04:28.789217483-04:00","level":"INFO","msg":"stream: started","id":"tunrdocb"}
+{"time":"2026-04-01T09:04:28.789227612-04:00","level":"INFO","msg":"writer: started","stream_id":"tunrdocb"}
+{"time":"2026-04-01T09:04:28.789241744-04:00","level":"INFO","msg":"sender: started","stream_id":"tunrdocb"}
+{"time":"2026-04-01T09:32:31.969881563-04:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-04-01T09:32:36.994704994-04:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-04-01T09:32:36.998622976-04:00","level":"INFO","msg":"stream: closing","id":"tunrdocb"}
+{"time":"2026-04-01T09:32:36.998638674-04:00","level":"INFO","msg":"handler: closed","stream_id":"tunrdocb"}
+{"time":"2026-04-01T09:32:36.999813805-04:00","level":"INFO","msg":"sender: closed","stream_id":"tunrdocb"}
+{"time":"2026-04-01T09:32:36.999820148-04:00","level":"INFO","msg":"stream: closed","id":"tunrdocb"}
