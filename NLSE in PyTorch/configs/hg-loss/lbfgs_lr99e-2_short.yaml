@@ -27,8 +27,8 @@ training:
   m: 8
   w_mse: 1e4
   w_pen: 1e3
-  lr: 1.0
-  N_train: 1000
+  lr: 0.99
+  N_train: 500
   loss_fn: hg_phase
   transformation: identity
   optimizer: lbfgs
@@ -42,9 +42,9 @@ plotting:
 wandb:
   project: "xpm-identity-operator"
   entity: lgwlab
-  name: hg-phase-lbfgs-full
-  tags: ["hg_phase", "identity", "lbfgs", "lr1e-1"]
-  notes: "HG phase loss, L-BFGS optimizer, lr=1e-1"
+  name: hg-phase-lbfgs-lr99e-2
+  tags: ["hg_phase", "identity", "lbfgs", "lr99e-2"]
+  notes: "HG phase loss, L-BFGS optimizer, lr=99e-2"
 
 # Device Configuration
 device:
