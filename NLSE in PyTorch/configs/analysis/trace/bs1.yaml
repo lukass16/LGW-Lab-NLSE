@@ -34,7 +34,7 @@ plotting:
   mode_nr: 0
 
 wandb:
-  project: "xpm-identity-operator"
+  project: "xpm-analysis"
   entity: lgwlab
   name: analysis-trace-bs1
   tags: ["analysis", "trace", "identity", "lbfgs", "bs1"]

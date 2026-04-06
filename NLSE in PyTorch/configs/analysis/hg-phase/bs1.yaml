@@ -34,7 +34,7 @@ plotting:
   mode_nr: 0
 
 wandb:
-  project: "xpm-identity-operator"
+  project: "xpm-analysis"
   entity: lgwlab
   name: analysis-hg-phase-bs1
   tags: ["analysis", "hg_phase", "identity", "lbfgs", "bs1"]
