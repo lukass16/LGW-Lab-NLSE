@@ -23,6 +23,27 @@ from pathlib import Path
 import yaml
 import json
 
+
+class Tee:
+    """Duplicates writes to both a stream and a log file."""
+    def __init__(self, stream, filepath):
+        self.stream = stream
+        self.file = open(filepath, 'w', buffering=1)
+
+    def write(self, data):
+        self.stream.write(data)
+        self.file.write(data)
+
+    def flush(self):
+        self.stream.flush()
+        self.file.flush()
+
+    def close(self):
+        self.file.close()
+
+    def __getattr__(self, attr):
+        return getattr(self.stream, attr)
+
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend for batch jobs
@@ -1014,7 +1035,14 @@ def main():
         run_dir = create_run_directory(name=wandb_name)
     
     print(f"\nRun directory: {run_dir}")
-    
+
+    # Tee stdout and stderr to a log file inside the run directory
+    log_path = run_dir / "train.log"
+    _tee_stdout = Tee(sys.stdout, log_path)
+    _tee_stderr = Tee(sys.stderr, log_path)
+    sys.stdout = _tee_stdout
+    sys.stderr = _tee_stderr
+
     # Update config with the actual loss function and transformation being used
     if 'training' not in config:
         config['training'] = {}
@@ -1048,6 +1076,12 @@ def main():
     print(f"Training completed successfully!")
     print(f"Results saved to: {run_dir}")
     print(f"{'='*80}")
+
+    # Close the log tee and restore streams
+    sys.stdout = _tee_stdout.stream
+    sys.stderr = _tee_stderr.stream
+    _tee_stdout.close()
+    _tee_stderr.close()
 
 
 if __name__ == '__main__':
