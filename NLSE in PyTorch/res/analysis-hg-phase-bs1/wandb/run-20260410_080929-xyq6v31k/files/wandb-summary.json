@@ -1,0 +1,1 @@
+{"_runtime":259,"iteration":156,"learning_rate":0.9,"loss_mse":0.07605929672718048,"eval_trace_fidelity":94.58085632324219,"best_loss":0.07605929672718048,"loss":0.07605929672718048,"loss_pen":3.5857004032635587e-09,"eval_frobenius_norm":7.605930022691609e-06,"_timestamp":1.7758232285648732e+09,"_wandb":{"runtime":259},"_step":156,"eval_hg_fidelity":97.25273732519582}

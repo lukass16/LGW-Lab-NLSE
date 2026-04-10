@@ -1,0 +1,15 @@
+
+Starting training for 1500 iterations...
+Training: 100%|██████████| 1500/1500 [06:39<00:00,  3.76it/s]
+Iteration 150/1500: Loss=0.076128, MSE=0.076128, Pen=0.000000, Best=0.076128 (iter 16)
+Iteration 300/1500: Loss=0.076128, MSE=0.076128, Pen=0.000000, Best=0.076128 (iter 16)
+Iteration 450/1500: Loss=0.076128, MSE=0.076128, Pen=0.000000, Best=0.076128 (iter 16)
+Iteration 600/1500: Loss=0.076128, MSE=0.076128, Pen=0.000000, Best=0.076128 (iter 16)
+Iteration 750/1500: Loss=0.076128, MSE=0.076128, Pen=0.000000, Best=0.076128 (iter 16)
+Iteration 900/1500: Loss=0.076128, MSE=0.076128, Pen=0.000000, Best=0.076128 (iter 16)
+Iteration 1050/1500: Loss=0.076128, MSE=0.076128, Pen=0.000000, Best=0.076128 (iter 16)
+Iteration 1200/1500: Loss=0.076128, MSE=0.076128, Pen=0.000000, Best=0.076128 (iter 16)
+Iteration 1350/1500: Loss=0.076128, MSE=0.076128, Pen=0.000000, Best=0.076128 (iter 16)
+Iteration 1500/1500: Loss=0.076128, MSE=0.076128, Pen=0.000000, Best=0.076128 (iter 16)
+
+Restoring best model from iteration 16 (loss=0.076128)

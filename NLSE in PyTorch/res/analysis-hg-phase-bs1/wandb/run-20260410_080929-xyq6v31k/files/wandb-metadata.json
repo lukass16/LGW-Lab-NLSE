@@ -1,0 +1,71 @@
+{
+  "os": "Linux-4.18.0-553.87.1.el8_10.x86_64-x86_64-with-glibc2.28",
+  "python": "CPython 3.11.14",
+  "startedAt": "2026-04-10T12:09:29.072018Z",
+  "args": [
+    "--config",
+    "configs/analysis/hg-phase/bs1.yaml"
+  ],
+  "program": "/home/lrk42/LGW-Lab-NLSE/NLSE in PyTorch/train_xpm_unitary.py",
+  "codePath": "NLSE in PyTorch/train_xpm_unitary.py",
+  "codePathLocal": "train_xpm_unitary.py",
+  "git": {
+    "remote": "https://github.com/lukass16/LGW-Lab-NLSE.git",
+    "commit": "577f401ca8264cb9bd49be057800c674a36e8efb"
+  },
+  "email": "lukasskellijs@gmail.com",
+  "root": "runs/analysis-hg-phase-bs1",
+  "host": "a1132u05n02.mghpcc.ycrc.yale.edu",
+  "executable": "/home/lrk42/.conda/envs/torch-gpu/bin/python",
+  "cpu_count": 64,
+  "cpu_count_logical": 64,
+  "disk": {
+    "/": {
+      "total": "540878962688",
+      "used": "74014720"
+    }
+  },
+  "memory": {
+    "total": "1081757925376"
+  },
+  "slurm": {
+    "cluster_name": "bouchet",
+    "conf": "/var/lib/slurmconf/slurm.conf",
+    "cpus_on_node": "1",
+    "cpus_per_task": "1",
+    "export_env": "NONE",
+    "get_user_env": "1",
+    "gtids": "0",
+    "hint": "nomultithread",
+    "job_account": "pi_lgw23",
+    "job_cpus_per_node": "1",
+    "job_end_time": "1775829205",
+    "job_gid": "1026647",
+    "job_id": "7847339",
+    "job_name": "ood-codeserver",
+    "job_nodelist": "a1132u05n02",
+    "job_num_nodes": "1",
+    "job_partition": "devel",
+    "job_qos": "interactive",
+    "job_start_time": "1775822005",
+    "job_uid": "26647",
+    "job_user": "lrk42",
+    "jobid": "7847339",
+    "localid": "0",
+    "mem_per_cpu": "5120",
+    "nnodes": "1",
+    "nodeid": "0",
+    "nodelist": "a1132u05n02",
+    "oom_kill_step": "0",
+    "prio_process": "0",
+    "procid": "0",
+    "submit_dir": "/var/www/ood/apps/sys/dashboard",
+    "submit_host": "ondemand1.bouchet.ycrc.yale.edu",
+    "task_pid": "3687934",
+    "tasks_per_node": "1",
+    "topology_addr": "hdrspine.a1132u14.a1132u05n02",
+    "topology_addr_pattern": "switch.switch.node",
+    "tres_per_task": "cpu=1"
+  },
+  "writerId": "jfelhdxe5b3xexqpsq7g5c73cezf89s2"
+}
