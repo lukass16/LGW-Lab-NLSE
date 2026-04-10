@@ -28,10 +28,13 @@ class Tee:
     """Duplicates writes to both a stream and a log file."""
     def __init__(self, stream, filepath):
         self.stream = stream
-        self.file = open(filepath, 'w', buffering=1)
+        self.file = open(filepath, 'w', encoding='utf-8', errors='replace', buffering=1)
 
     def write(self, data):
-        self.stream.write(data)
+        try:
+            self.stream.write(data)
+        except UnicodeEncodeError:
+            self.stream.write(data.encode(self.stream.encoding or 'utf-8', errors='replace').decode(self.stream.encoding or 'utf-8'))
         self.file.write(data)
 
     def flush(self):

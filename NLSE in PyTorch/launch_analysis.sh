@@ -3,8 +3,11 @@
 # Submits one independent SLURM job per config in configs/analysis/
 # Usage: bash launch_analysis.sh
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-JOB_SCRIPT="$SCRIPT_DIR/priority_run.sh"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+JOB_SCRIPT="$PROJECT_DIR/priority_run.sh"
+RUNS_DIR="$PROJECT_DIR/runs"
+
+mkdir -p "$RUNS_DIR"
 
 CONFIGS=(
     configs/analysis/hg-phase/bs1.yaml
@@ -20,6 +23,10 @@ CONFIGS=(
 )
 
 for cfg in "${CONFIGS[@]}"; do
-    job_id=$(sbatch --export=ALL,CONFIG="$cfg" "$JOB_SCRIPT" | awk '{print $NF}')
+    job_id=$(sbatch \
+        --export=ALL,CONFIG="$cfg",PROJECT_DIR="$PROJECT_DIR" \
+        --output="$RUNS_DIR/slurm_%j_out.txt" \
+        --error="$RUNS_DIR/slurm_%j_err.txt" \
+        "$JOB_SCRIPT" | awk '{print $NF}')
     echo "Submitted $cfg -> job $job_id"
 done
