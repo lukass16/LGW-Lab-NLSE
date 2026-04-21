@@ -1,0 +1,16 @@
+{
+  "batch_size": 8,
+  "loss_fn": "hg_phase",
+  "transformation": "identity",
+  "optimizer": "lbfgs",
+  "lr": 0.9,
+  "N_train": 1500,
+  "N_modes": 500,
+  "best_iteration": -1,
+  "best_loss": Infinity,
+  "best_eval_trace_fidelity": NaN,
+  "best_eval_frobenius_norm": NaN,
+  "best_eval_hg_fidelity": NaN,
+  "run_dir": "runs/analysis-hg-phase-bs8",
+  "config_path": "configs/analysis/hg-phase/bs8.yaml"
+}

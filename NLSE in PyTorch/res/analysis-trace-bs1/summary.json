@@ -1,0 +1,16 @@
+{
+  "batch_size": 1,
+  "loss_fn": "trace",
+  "transformation": "identity",
+  "optimizer": "lbfgs",
+  "lr": 0.9,
+  "N_train": 10000,
+  "N_modes": 500,
+  "best_iteration": 251,
+  "best_loss": -0.9994762539863586,
+  "best_eval_trace_fidelity": 99.947509765625,
+  "best_eval_frobenius_norm": 0.037856124341487885,
+  "best_eval_hg_fidelity": 99.97380089809245,
+  "run_dir": "runs/analysis-trace-bs1",
+  "config_path": "configs/analysis/trace/bs1.yaml"
+}

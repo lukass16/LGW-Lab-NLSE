@@ -1,0 +1,15 @@
+
+Starting training for 10000 iterations...
+Training: 100%|██████████| 10000/10000 [1:25:32<00:00,  1.95it/s]
+Iteration 1000/10000: Loss=-0.978507, MSE=-0.978514, Pen=0.000007, Best=-0.978507 (iter 1000)
+Iteration 2000/10000: Loss=-0.978575, MSE=-0.978583, Pen=0.000008, Best=-0.978575 (iter 1278)
+Iteration 3000/10000: Loss=-0.978575, MSE=-0.978583, Pen=0.000008, Best=-0.978575 (iter 1278)
+Iteration 4000/10000: Loss=-0.978575, MSE=-0.978583, Pen=0.000008, Best=-0.978575 (iter 1278)
+Iteration 5000/10000: Loss=-0.978575, MSE=-0.978583, Pen=0.000008, Best=-0.978575 (iter 1278)
+Iteration 6000/10000: Loss=-0.978575, MSE=-0.978583, Pen=0.000008, Best=-0.978575 (iter 1278)
+Iteration 7000/10000: Loss=-0.978575, MSE=-0.978583, Pen=0.000008, Best=-0.978575 (iter 1278)
+Iteration 8000/10000: Loss=-0.978575, MSE=-0.978583, Pen=0.000008, Best=-0.978575 (iter 1278)
+Iteration 9000/10000: Loss=-0.978575, MSE=-0.978583, Pen=0.000008, Best=-0.978575 (iter 1278)
+Iteration 10000/10000: Loss=-0.978575, MSE=-0.978583, Pen=0.000008, Best=-0.978575 (iter 1278)
+
+Restoring best model from iteration 1278 (loss=-0.978575)

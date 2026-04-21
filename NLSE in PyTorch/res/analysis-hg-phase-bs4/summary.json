@@ -1,0 +1,16 @@
+{
+  "batch_size": 4,
+  "loss_fn": "hg_phase",
+  "transformation": "identity",
+  "optimizer": "lbfgs",
+  "lr": 0.9,
+  "N_train": 1500,
+  "N_modes": 500,
+  "best_iteration": 24,
+  "best_loss": 8.48551082611084,
+  "best_eval_trace_fidelity": 42.057655334472656,
+  "best_eval_frobenius_norm": 0.0008484561694785953,
+  "best_eval_hg_fidelity": 71.32298668253075,
+  "run_dir": "runs/analysis-hg-phase-bs4",
+  "config_path": "configs/analysis/hg-phase/bs4.yaml"
+}

@@ -1,0 +1,13 @@
+
+Starting training for 1500 iterations...
+Training: 100%|██████████| 1500/1500 [1:49:50<00:00,  4.39s/it]
+Iteration 150/1500: Loss=nan, MSE=nan, Pen=nan, Best=inf (iter 0)
+Iteration 300/1500: Loss=nan, MSE=nan, Pen=nan, Best=inf (iter 0)
+Iteration 450/1500: Loss=nan, MSE=nan, Pen=nan, Best=inf (iter 0)
+Iteration 600/1500: Loss=nan, MSE=nan, Pen=nan, Best=inf (iter 0)
+Iteration 750/1500: Loss=nan, MSE=nan, Pen=nan, Best=inf (iter 0)
+Iteration 900/1500: Loss=nan, MSE=nan, Pen=nan, Best=inf (iter 0)
+Iteration 1050/1500: Loss=nan, MSE=nan, Pen=nan, Best=inf (iter 0)
+Iteration 1200/1500: Loss=nan, MSE=nan, Pen=nan, Best=inf (iter 0)
+Iteration 1350/1500: Loss=nan, MSE=nan, Pen=nan, Best=inf (iter 0)
+Iteration 1500/1500: Loss=nan, MSE=nan, Pen=nan, Best=inf (iter 0)

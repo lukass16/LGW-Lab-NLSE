@@ -1,0 +1,6 @@
+{"time":"2026-04-10T11:43:24.644403207-04:00","level":"INFO","msg":"stream: starting","core version":"0.22.3"}
+{"time":"2026-04-10T11:43:24.88246171-04:00","level":"INFO","msg":"stream: created new stream","id":"ex3nolsq"}
+{"time":"2026-04-10T11:43:24.882569571-04:00","level":"INFO","msg":"handler: started","stream_id":"ex3nolsq"}
+{"time":"2026-04-10T11:43:24.884206966-04:00","level":"INFO","msg":"stream: started","id":"ex3nolsq"}
+{"time":"2026-04-10T11:43:24.884674206-04:00","level":"INFO","msg":"writer: started","stream_id":"ex3nolsq"}
+{"time":"2026-04-10T11:43:24.884684733-04:00","level":"INFO","msg":"sender: started","stream_id":"ex3nolsq"}

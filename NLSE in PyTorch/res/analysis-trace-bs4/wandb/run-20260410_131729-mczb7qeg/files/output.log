@@ -1,0 +1,4 @@
+
+Starting training for 10000 iterations...
+Training:  17%|█▋        | 1657/10000 [1:59:53<10:01:21,  4.32s/it]
+Iteration 1000/10000: Loss=nan, MSE=nan, Pen=nan, Best=-0.521573 (iter 8)

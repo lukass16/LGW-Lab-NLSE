@@ -1,0 +1,90 @@
+{
+  "os": "Linux-4.18.0-553.87.1.el8_10.x86_64-x86_64-with-glibc2.28",
+  "python": "CPython 3.11.14",
+  "startedAt": "2026-04-10T12:40:56.899394Z",
+  "args": [
+    "--config",
+    "configs/analysis/hg-phase/bs4.yaml"
+  ],
+  "program": "/home/lrk42/LGW-Lab-NLSE/NLSE in PyTorch/train_xpm_unitary.py",
+  "codePath": "NLSE in PyTorch/train_xpm_unitary.py",
+  "codePathLocal": "train_xpm_unitary.py",
+  "git": {
+    "remote": "https://github.com/lukass16/LGW-Lab-NLSE.git",
+    "commit": "1b3645758e761e167b34e1ff0338d36b9dae9e99"
+  },
+  "email": "lukasskellijs@gmail.com",
+  "root": "runs/analysis-hg-phase-bs4",
+  "host": "a1128u20n01.mghpcc.ycrc.yale.edu",
+  "executable": "/home/lrk42/.conda/envs/torch-gpu/bin/python",
+  "cpu_count": 48,
+  "cpu_count_logical": 48,
+  "gpu": "NVIDIA RTX 5000 Ada Generation",
+  "gpu_count": 1,
+  "disk": {
+    "/": {
+      "total": "270395559936",
+      "used": "352632832"
+    }
+  },
+  "memory": {
+    "total": "540791119872"
+  },
+  "gpu_nvidia": [
+    {
+      "name": "NVIDIA RTX 5000 Ada Generation",
+      "memoryTotal": "34351349760",
+      "cudaCores": 12800,
+      "architecture": "Ada",
+      "uuid": "GPU-3636d6ac-4f0f-8e89-83a0-de311a8262ad"
+    }
+  ],
+  "cudaVersion": "12.8",
+  "slurm": {
+    "cluster_name": "bouchet",
+    "conf": "/var/lib/slurmconf/slurm.conf",
+    "cpus_on_node": "1",
+    "cpus_per_task": "1",
+    "export_env": "NONE",
+    "get_user_env": "1",
+    "gpus": "rtx_5000_ada:1",
+    "gpus_on_node": "1",
+    "gtids": "0",
+    "hint": "nomultithread",
+    "job_account": "prio_lgw23",
+    "job_cpus_per_node": "1",
+    "job_end_time": "1775832047",
+    "job_gid": "1026647",
+    "job_gpus": "2",
+    "job_id": "7847616",
+    "job_name": "xpm_analysis",
+    "job_nodelist": "a1128u20n01",
+    "job_num_nodes": "1",
+    "job_partition": "priority_gpu",
+    "job_qos": "prio_lgw23",
+    "job_start_time": "1775824847",
+    "job_uid": "26647",
+    "job_user": "lrk42",
+    "jobid": "7847616",
+    "localid": "0",
+    "mem_per_cpu": "5120",
+    "mem_per_node": "5120",
+    "nnodes": "1",
+    "nodeid": "0",
+    "nodelist": "a1128u20n01",
+    "nprocs": "1",
+    "ntasks": "1",
+    "oom_kill_step": "0",
+    "prio_process": "0",
+    "procid": "0",
+    "submit_dir": "/home/lrk42/LGW-Lab-NLSE/NLSE in PyTorch",
+    "submit_host": "a1132u05n02.mghpcc.ycrc.yale.edu",
+    "task_pid": "227080",
+    "tasks_per_node": "1",
+    "threads_per_core": "1",
+    "topology_addr": "hdrspine.a1128u27.a1128u20n01",
+    "topology_addr_pattern": "switch.switch.node",
+    "tres_per_task": "cpu=1"
+  },
+  "writerId": "sriwtpnxz3f5sz9iajwhafutxwp3kn3o"
+}

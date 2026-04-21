@@ -1,0 +1,7 @@
+{"time":"2026-04-10T13:17:29.515279582-04:00","level":"INFO","msg":"stream: starting","core version":"0.22.3"}
+{"time":"2026-04-10T13:17:29.738434172-04:00","level":"INFO","msg":"stream: created new stream","id":"mczb7qeg"}
+{"time":"2026-04-10T13:17:29.738591277-04:00","level":"INFO","msg":"handler: started","stream_id":"mczb7qeg"}
+{"time":"2026-04-10T13:17:29.740813164-04:00","level":"INFO","msg":"stream: started","id":"mczb7qeg"}
+{"time":"2026-04-10T13:17:29.741315713-04:00","level":"INFO","msg":"writer: started","stream_id":"mczb7qeg"}
+{"time":"2026-04-10T13:17:29.741353152-04:00","level":"INFO","msg":"sender: started","stream_id":"mczb7qeg"}
+{"time":"2026-04-10T14:04:03.429356087-04:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/lgwlab/xpm-analysis/mczb7qeg/file_stream","body":"{\"error\":\"context deadline exceeded\"}"}
