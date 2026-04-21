@@ -1,8 +1,6 @@
 #!/bin/bash
 
 #SBATCH --job-name=xpm_train_gpu
-#SBATCH --output=/home/lrk42/"LGW Lab"/unitary/LGW-Lab-NLSE/"NLSE in PyTorch"/runs/slurm_%j_out.txt
-#SBATCH --error=/home/lrk42/"LGW Lab"/unitary/LGW-Lab-NLSE/"NLSE in PyTorch"/runs/slurm_%j_err.txt
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --gpus=rtx_5000_ada:1

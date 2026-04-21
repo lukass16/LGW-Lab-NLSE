@@ -6,7 +6,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --gpus=1
-#SBATCH --partition=gpu
+#SBATCH --partition=gpu_b200
 #SBATCH --time=1:00:00
 
 export WANDB_API_KEY=fa6aa2781732fe60c4a13ca88d919b7f56360fd8
