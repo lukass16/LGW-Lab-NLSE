@@ -24,7 +24,7 @@ training:
   w_mse: 1e4
   w_pen: 1e3
   lr: 0.1
-  N_train: 2500
+  N_train: 5000
   loss_fn: trace
   transformation: identity
   optimizer: adam
