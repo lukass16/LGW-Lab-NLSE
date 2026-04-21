@@ -1,4 +1,0 @@
-
-CondaError: Run 'conda init' before 'conda deactivate'
-
-python: can't open file '/home/lrk42/LGW Lab/unitary/LGW-Lab-NLSE/NLSE in PyTorch/train_xpm_unitary.py': [Errno 2] No such file or directory
