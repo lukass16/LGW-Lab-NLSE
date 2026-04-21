@@ -459,7 +459,7 @@ def plot_mode_comparison(y, t, A_j_evolution, plot_percent=0.3, transformation_n
 
     # Create subplot grid
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 4 * n_rows))
-    axes = axes.flatten() if B > 1 else [axes]
+    axes = np.atleast_1d(axes).flatten()
 
     for mode_idx in range(B):
         ax = axes[mode_idx]
@@ -517,7 +517,7 @@ def plot_mode_comparison_hg(y, A_j_evolution, hg_basis, dt, num_modes=None, tran
 
     # Prepare subplot grid
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 4 * n_rows))
-    axes = axes.flatten() if B > 1 else [axes]
+    axes = np.atleast_1d(axes).flatten()
 
     # Plot for each mode its HG coefficient stem plots (target vs output)
     mode_indices = np.arange(num_modes)

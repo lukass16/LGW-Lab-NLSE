@@ -1,0 +1,49 @@
+# Analysis: Trace Loss - Adam - Batch Size 16 - SPM/Dispersion OFF on strong pulse
+# Initial strong pulse is still seeded with the configured beta2_k / gamma_k,
+# but during propagation the strong pulse experiences neither SPM nor dispersion
+# (beta2_k = gamma_k = 0). The weak pulse j still feels XPM from the strong pulse.
+
+simulation:
+  Lz: 1e-3
+  Nz: 200
+  Lt: 16
+  Nt: 4096
+  N_modes: 500
+
+medium:
+  beta2_j: -10
+  beta2_k: -10
+  gamma_j: 1
+  gamma_k: 1
+
+pulse:
+  tau: 0.1
+
+training:
+  batch_size: 16
+  amplitude_downscale: 1e-1
+  mask_percent: 0.8
+  m: 8
+  w_mse: 1e4
+  w_pen: 1e3
+  lr: 0.1
+  N_train: 2500
+  loss_fn: trace
+  transformation: identity
+  optimizer: adam
+  test_spm_dispersion_off: true
+
+plotting:
+  plot_percent: 0.3
+  mode_nr: 7
+
+wandb:
+  project: "xpm-analysis"
+  entity: lgwlab
+  name: analysis-trace-spm-off-bs16
+  tags: ["analysis", "trace", "identity", "adam", "bs16", "spm-off"]
+  notes: "Analysis: Trace loss, batch_size=16, strong pulse SPM+dispersion OFF"
+
+device:
+  use_cuda: true
+  device_id: 0

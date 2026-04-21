@@ -16,6 +16,7 @@ Usage:
 """
 
 import argparse
+import math
 import os
 import sys
 from datetime import datetime
@@ -272,6 +273,12 @@ def setup_training(config, device, transformation_name='identity'):
     # Get random seed for transformation (optional, defaults to 27)
     transformation_seed = int(train.get('transformation_seed', 27))
     
+    # Test scenario flag: when True, propagate the strong pulse with
+    # beta2_k = gamma_k = 0 (no SPM, no dispersion on the strong pulse),
+    # while still using the original beta2_k / gamma_k to define the
+    # initial strong soliton (i.e. the initial training parameters).
+    test_spm_dispersion_off = bool(train.get('test_spm_dispersion_off', False))
+    
     # Calculate derived parameters
     dz = Lz / Nz
     dt = Lt / Nt
@@ -298,10 +305,25 @@ def setup_training(config, device, transformation_name='identity'):
     hg_basis_B = hg_basis[:B, :]  # truncated basis for batch size
     y = torch.stack([hg_to_time(y_hg[i], hg_basis_B) for i in range(B)])  # shape: (B, Nt)
     
-    # Define input strong pulse
+    # Define input strong pulse - always uses the configured beta2_k / gamma_k
+    # so the initial parameters seed the same soliton even in the
+    # test_spm_dispersion_off scenario.
     A_strong = strong_soliton(t, beta2_k, gamma_k, tau)
     A_strong_hg = time_to_hg(A_strong, hg_basis, dt).to(torch.cfloat)
     theta = torch.nn.Parameter(A_strong_hg.clone().detach().requires_grad_(True))
+    
+    # Effective propagation parameters for the strong pulse k. When the
+    # test_spm_dispersion_off flag is set, the strong pulse experiences no
+    # SPM (gamma_k -> 0) and no dispersion (beta2_k -> 0); the weak pulse j
+    # still sees XPM from |A_k|^2 via gamma_j.
+    if test_spm_dispersion_off:
+        beta2_k_prop = 0.0
+        gamma_k_prop = 0.0
+        print("[TEST] test_spm_dispersion_off=True: strong pulse propagated with "
+              f"beta2_k=0, gamma_k=0 (initial pulse still defined with beta2_k={beta2_k}, gamma_k={gamma_k}).")
+    else:
+        beta2_k_prop = beta2_k
+        gamma_k_prop = gamma_k
     
     # Define penalty mask
     penalty = torch.zeros_like(t, device=device)
@@ -450,19 +472,32 @@ def setup_training(config, device, transformation_name='identity'):
         Ain_k = hg_to_time(theta, hg_basis)
         return split_step_fourier_xpm_batch(
             x, Ain_k, dz, Nz, 
-            beta2_j, beta2_k, 
-            gamma_j, gamma_k, 
+            beta2_j, beta2_k_prop, 
+            gamma_j, gamma_k_prop, 
             Lt
         )
     
     # Initialize optimizer
     optimizer_name = train.get('optimizer', 'adam').lower()
+    lbfgs_max_iter = int(train.get('lbfgs_max_iter', 10))
+    lbfgs_history_size = int(train.get('lbfgs_history_size', 10))
     if optimizer_name == 'adam':
         optimizer = torch.optim.Adam([theta], lr=lr)
     elif optimizer_name == 'sgd':
         optimizer = torch.optim.SGD([theta], lr=lr)
     elif optimizer_name == 'lbfgs':
-        optimizer = torch.optim.LBFGS([theta], lr=lr, max_iter=20, history_size=10)
+        # 'strong_wolfe' line search makes `lr` an upper bound on the step
+        # length and backtracks whenever the loss would increase, which is
+        # what stops a single overshoot from blowing theta to inf/nan.
+        lbfgs_line_search = train.get('lbfgs_line_search', 'strong_wolfe')
+        if isinstance(lbfgs_line_search, str) and lbfgs_line_search.lower() == 'none':
+            lbfgs_line_search = None
+        optimizer = torch.optim.LBFGS(
+            [theta], lr=lr,
+            max_iter=lbfgs_max_iter,
+            history_size=lbfgs_history_size,
+            line_search_fn=lbfgs_line_search,
+        )
     else:
         raise ValueError(f"Unknown optimizer: '{optimizer_name}'. Valid options: adam, sgd, lbfgs")
     
@@ -557,6 +592,77 @@ def eval_trace_fidelity(final_j_hg, y_hg):
     return (actual_trace_fid / (target_trace_fid + 1e-10) * 100).item()
 
 
+def _atomic_write_json(path, obj):
+    """Write JSON atomically: write to a tmp file then os.replace."""
+    path = Path(path)
+    tmp_path = path.with_suffix(path.suffix + '.tmp')
+    with open(tmp_path, 'w') as f:
+        json.dump(obj, f, indent=2)
+    os.replace(tmp_path, path)
+
+
+def _save_run_artifacts(
+    run_dir, config, loss_fn_name, transformation_name,
+    losses, losses_mse, losses_pen,
+    best_iteration, best_loss,
+    final_eval_hg_fidelity=None,
+    final_eval_frobenius_norm=None,
+    final_eval_trace_fidelity=None,
+    extra_summary=None,
+    status='in_progress',
+):
+    """Persist losses.json and summary.json with current state.
+
+    Safe to call repeatedly during training to keep on-disk artifacts up to
+    date in case the run is killed (NaN, walltime, OOM, etc.). Writes are
+    atomic so a partial file is never left on disk.
+
+    The `final_eval_*` values are only available after the post-loop forward
+    pass over the best model; pass None during in-progress saves.
+    """
+    has_best = best_iteration is not None and best_iteration >= 0
+    final_losses = {
+        'losses': losses,
+        'losses_mse': losses_mse,
+        'losses_pen': losses_pen,
+        'final_loss': losses[-1] if losses else None,
+        'final_loss_mse': losses_mse[-1] if losses_mse else None,
+        'final_loss_pen': losses_pen[-1] if losses_pen else None,
+        'final_eval_hg_fidelity': final_eval_hg_fidelity,
+        'final_eval_frobenius_norm': final_eval_frobenius_norm,
+        'final_eval_trace_fidelity': final_eval_trace_fidelity,
+        'best_loss': best_loss if has_best else None,
+        'best_iteration': best_iteration if has_best else None,
+        'best_loss_mse': losses_mse[best_iteration] if has_best else None,
+        'best_loss_pen': losses_pen[best_iteration] if has_best else None,
+        'iterations_completed': len(losses),
+        'status': status,
+    }
+    _atomic_write_json(run_dir / 'losses.json', final_losses)
+
+    summary = {
+        'batch_size': int(config['training']['batch_size']),
+        'loss_fn': loss_fn_name,
+        'transformation': transformation_name,
+        'optimizer': config['training'].get('optimizer', 'adam'),
+        'lr': float(config['training']['lr']),
+        'N_train': int(config['training']['N_train']),
+        'N_modes': int(config['simulation']['N_modes']),
+        'iterations_completed': len(losses),
+        'status': status,
+        'best_iteration': best_iteration if has_best else None,
+        'best_loss': best_loss if has_best else None,
+        'best_eval_trace_fidelity': final_eval_trace_fidelity,
+        'best_eval_frobenius_norm': final_eval_frobenius_norm,
+        'best_eval_hg_fidelity': final_eval_hg_fidelity,
+        'run_dir': str(run_dir),
+    }
+    if extra_summary:
+        summary.update(extra_summary)
+    _atomic_write_json(run_dir / 'summary.json', summary)
+    return final_losses, summary
+
+
 def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_name='basic'):
     """Main training loop."""
     train = config['training']
@@ -632,9 +738,15 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
     best_iteration = -1
     checkpoint_dir = run_dir / "checkpoints"
     checkpoint_dir.mkdir(exist_ok=True)
-    
+
     is_lbfgs = isinstance(optimizer, torch.optim.LBFGS)
-    
+    transformation_name = training_setup.get('transformation_name', 'identity')
+    # Persist artifacts at most ~20 times during training so a SLURM kill /
+    # NaN / crash still leaves usable losses.json + summary.json on disk.
+    partial_save_interval = max(1, int(train['N_train']) // 20)
+    nan_detected = False
+    early_exit_reason = None
+
     print(f"\nStarting training for {train['N_train']} iterations...")
     for i in tqdm(range(train['N_train']), desc="Training"):
         if curriculum_learning and i == switch_iter:
@@ -649,7 +761,15 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
                 elif curriculum_opt == 'sgd':
                     optimizer = torch.optim.SGD([theta], lr=lr)
                 elif curriculum_opt == 'lbfgs':
-                    optimizer = torch.optim.LBFGS([theta], lr=lr, max_iter=20, history_size=10)
+                    curr_line_search = train.get('lbfgs_line_search', 'strong_wolfe')
+                    if isinstance(curr_line_search, str) and curr_line_search.lower() == 'none':
+                        curr_line_search = None
+                    optimizer = torch.optim.LBFGS(
+                        [theta], lr=lr,
+                        max_iter=int(train.get('lbfgs_max_iter', 10)),
+                        history_size=int(train.get('lbfgs_history_size', 10)),
+                        line_search_fn=curr_line_search,
+                    )
                 is_lbfgs = isinstance(optimizer, torch.optim.LBFGS)
                 tqdm.write(f"[Curriculum] Switching to hg_phase loss + {curriculum_opt} optimizer at iteration {i}")
             else:
@@ -662,6 +782,23 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
                 A_j_evo, A_k_evo = forward(theta, hg_basis)
                 l_mse, l_pen = loss_function(A_j_evo, A_k_evo)
                 l = l_mse + l_pen
+                # NaN-safe closure: if the forward / loss became non-finite at
+                # the trial step, return +inf with a zero gradient so the
+                # strong-Wolfe line search backtracks instead of committing the
+                # bad step (which would otherwise corrupt theta to nan/inf for
+                # the rest of training).
+                if not torch.isfinite(l):
+                    if theta.grad is None:
+                        theta.grad = torch.zeros_like(theta)
+                    else:
+                        theta.grad.detach_()
+                        theta.grad.zero_()
+                    closure.A_j_evolution = A_j_evo
+                    closure.A_k_evolution = A_k_evo
+                    closure.loss_mse = l_mse
+                    closure.loss_pen = l_pen
+                    closure.loss = l
+                    return torch.full_like(l.detach(), float('inf'))
                 l.backward()
                 closure.A_j_evolution = A_j_evo
                 closure.A_k_evolution = A_k_evo
@@ -694,7 +831,32 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
         losses_mse.append(loss_mse_val)
         losses_pen.append(loss_pen_val)
         losses.append(loss_val)
-        
+
+        # NaN guard: if the loss explodes there is no point grinding through
+        # the rest of the schedule. Persist whatever we have and bail out.
+        if not (math.isfinite(loss_val)
+                and math.isfinite(loss_mse_val)
+                and math.isfinite(loss_pen_val)):
+            nan_detected = True
+            early_exit_reason = 'nan'
+            if best_iteration >= 0:
+                msg = (f"\n[NaN guard] Non-finite loss at iteration {i+1} "
+                       f"(loss={loss_val}). Stopping early. "
+                       f"Best so far: iter {best_iteration+1}, loss={best_loss:.6f}.")
+            else:
+                msg = (f"\n[NaN guard] Non-finite loss at iteration {i+1} "
+                       f"(loss={loss_val}). No finite iteration was recorded; "
+                       f"the optimizer likely overshot at step 0 -- "
+                       f"try a smaller lr / lbfgs_max_iter.")
+            tqdm.write(msg)
+            _save_run_artifacts(
+                run_dir, config, loss_fn_name, transformation_name,
+                losses, losses_mse, losses_pen,
+                best_iteration, best_loss if best_iteration >= 0 else None,
+                status='nan',
+            )
+            break
+
         # Universal evaluation metrics for comparison across runs
         with torch.no_grad():
             final_j = A_j_evolution[:, :, -1]
@@ -747,64 +909,78 @@ def train_loop(config, training_setup, device, run_dir, use_wandb=True, loss_fn_
         # Print progress every few iterations
         if (i + 1) % max(1, train['N_train'] // 10) == 0:
             print(f"Iteration {i+1}/{train['N_train']}: Loss={loss_val:.6f}, MSE={loss_mse_val:.6f}, Pen={loss_pen_val:.6f}, Best={best_loss:.6f} (iter {best_iteration+1})")
-    
-    # Restore best model before final evaluation
+
+        # Periodically flush losses.json + summary.json so a SLURM walltime
+        # kill still leaves usable artifacts on disk.
+        if (i + 1) % partial_save_interval == 0:
+            _save_run_artifacts(
+                run_dir, config, loss_fn_name, transformation_name,
+                losses, losses_mse, losses_pen,
+                best_iteration, best_loss if best_iteration >= 0 else None,
+                status='in_progress',
+            )
+
+    # Determine run status for the final artifacts.
+    if nan_detected:
+        status = 'nan'
+    elif len(losses) < int(train['N_train']):
+        # Loop exited early for some other reason (shouldn't normally happen).
+        status = 'partial'
+    else:
+        status = 'completed'
+
+    # Final evaluation only makes sense if we actually have a finite best
+    # model. Otherwise skip the forward pass to avoid NaN propagation.
+    final_eval_frob = None
+    final_eval_trace = None
+    final_eval_hg_fidelity = None
+    A_j_evolution = None
+    A_k_evolution = None
     if best_theta is not None:
         print(f"\nRestoring best model from iteration {best_iteration+1} (loss={best_loss:.6f})")
         theta.data.copy_(best_theta)
-    
-    # Final forward pass for evaluation (using best model)
-    with torch.no_grad():
-        A_j_evolution, A_k_evolution = forward(theta, hg_basis)
-        final_j = A_j_evolution[:, :, -1]
-        final_j_hg = torch.stack([time_to_hg(final_j[j], training_setup['hg_basis_B'], training_setup['dt']) 
-                                 for j in range(final_j.shape[0])])
-        # Evaluation metrics
-        final_eval_frob = eval_frobenius_norm(final_j_hg, training_setup['y_hg'])
-        final_eval_trace = eval_trace_fidelity(final_j_hg, training_setup['y_hg'])
-        # Legacy fidelity calculation (phase-aware, per-mode average)
-        target_dot_products = torch.sum(training_setup['y_hg'].conj() * training_setup['y_hg'], dim=1)
-        target_fidelity_avg = torch.mean(torch.abs(target_dot_products)).item()
-        dot_products = torch.sum(final_j_hg.conj() * training_setup['y_hg'], dim=1)
-        actual_fidelity_avg = torch.mean(torch.abs(dot_products)).item()
-        final_eval_hg_fidelity = (actual_fidelity_avg / (target_fidelity_avg + 1e-10)) * 100
-    
-    # Save final losses
-    final_losses = {
-        'losses': losses,
-        'losses_mse': losses_mse,
-        'losses_pen': losses_pen,
-        'final_loss': losses[-1],
-        'final_loss_mse': losses_mse[-1],
-        'final_loss_pen': losses_pen[-1],
-        'final_eval_hg_fidelity': final_eval_hg_fidelity,
-        'final_eval_frobenius_norm': final_eval_frob,
-        'final_eval_trace_fidelity': final_eval_trace,
-        'best_loss': best_loss,
-        'best_iteration': best_iteration,
-        'best_loss_mse': losses_mse[best_iteration] if best_iteration >= 0 else None,
-        'best_loss_pen': losses_pen[best_iteration] if best_iteration >= 0 else None,
-    }
-    
-    # Save losses to file
-    losses_path = run_dir / "losses.json"
-    with open(losses_path, 'w') as f:
-        json.dump(final_losses, f, indent=2)
-    
-    # Log final metrics to wandb
+        with torch.no_grad():
+            A_j_evolution, A_k_evolution = forward(theta, hg_basis)
+            final_j = A_j_evolution[:, :, -1]
+            final_j_hg = torch.stack([
+                time_to_hg(final_j[j], training_setup['hg_basis_B'], training_setup['dt'])
+                for j in range(final_j.shape[0])
+            ])
+            final_eval_frob = eval_frobenius_norm(final_j_hg, training_setup['y_hg'])
+            final_eval_trace = eval_trace_fidelity(final_j_hg, training_setup['y_hg'])
+            target_dot_products = torch.sum(training_setup['y_hg'].conj() * training_setup['y_hg'], dim=1)
+            target_fidelity_avg = torch.mean(torch.abs(target_dot_products)).item()
+            dot_products = torch.sum(final_j_hg.conj() * training_setup['y_hg'], dim=1)
+            actual_fidelity_avg = torch.mean(torch.abs(dot_products)).item()
+            final_eval_hg_fidelity = (actual_fidelity_avg / (target_fidelity_avg + 1e-10)) * 100
+    else:
+        print("\nNo finite best model recorded -- skipping final evaluation forward pass.")
+
+    # Persist final losses.json + summary.json (overwriting any partial save).
+    final_losses, _ = _save_run_artifacts(
+        run_dir, config, loss_fn_name, transformation_name,
+        losses, losses_mse, losses_pen,
+        best_iteration, best_loss if best_iteration >= 0 else None,
+        final_eval_hg_fidelity=final_eval_hg_fidelity,
+        final_eval_frobenius_norm=final_eval_frob,
+        final_eval_trace_fidelity=final_eval_trace,
+        status=status,
+    )
+
     if use_wandb and WANDB_AVAILABLE:
         wandb.log({
-            'final_loss': losses[-1],
-            'final_loss_mse': losses_mse[-1],
-            'final_loss_pen': losses_pen[-1],
+            'final_loss': losses[-1] if losses else None,
+            'final_loss_mse': losses_mse[-1] if losses_mse else None,
+            'final_loss_pen': losses_pen[-1] if losses_pen else None,
             'final_eval_hg_fidelity': final_eval_hg_fidelity,
             'final_eval_frobenius_norm': final_eval_frob,
             'final_eval_trace_fidelity': final_eval_trace,
-            'best_loss': best_loss,
-            'best_iteration': best_iteration,
+            'best_loss': best_loss if best_iteration >= 0 else None,
+            'best_iteration': best_iteration if best_iteration >= 0 else None,
+            'run_status': status,
         })
         wandb.finish()
-    
+
     return A_j_evolution, A_k_evolution, final_losses, best_iteration, best_loss
 
 
@@ -1068,37 +1244,38 @@ def main():
         loss_fn_name=loss_fn
     )
     
-    # Save model parameters (best model)
-    print("\nSaving model parameters...")
-    save_model_parameters(training_setup, run_dir, best_iteration, best_loss)
-    
-    # Generate unitary transformation comparison visualization
-    visualize_unitary_comparison(config, training_setup, run_dir)
-    
-    # Save a compact summary.json for easy cross-run aggregation
-    summary = {
-        'batch_size': int(config['training']['batch_size']),
-        'loss_fn': loss_fn,
-        'transformation': transformation,
-        'optimizer': config['training'].get('optimizer', 'adam'),
-        'lr': float(config['training']['lr']),
-        'N_train': int(config['training']['N_train']),
-        'N_modes': int(config['simulation']['N_modes']),
-        'best_iteration': best_iteration,
-        'best_loss': best_loss,
-        'best_eval_trace_fidelity': losses['final_eval_trace_fidelity'],
-        'best_eval_frobenius_norm': losses['final_eval_frobenius_norm'],
-        'best_eval_hg_fidelity': losses['final_eval_hg_fidelity'],
-        'run_dir': str(run_dir),
-        'config_path': str(args.config),
-    }
+    # train_loop has already written losses.json + summary.json. Only save
+    # parameters / visualisations if we actually have a finite best model;
+    # otherwise downstream steps would just persist NaN garbage.
+    has_best = best_iteration is not None and best_iteration >= 0
+
+    if has_best:
+        print("\nSaving model parameters...")
+        save_model_parameters(training_setup, run_dir, best_iteration, best_loss)
+        visualize_unitary_comparison(config, training_setup, run_dir)
+    else:
+        print("\nSkipping model-parameter save and unitary visualisation: "
+              "no finite best model was recorded.")
+
+    # Augment the summary written by train_loop with main()-only fields
+    # (config_path) without losing status / iterations_completed.
     summary_path = run_dir / "summary.json"
-    with open(summary_path, 'w') as f:
-        json.dump(summary, f, indent=2)
+    try:
+        with open(summary_path, 'r') as f:
+            summary = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        summary = {}
+    summary['config_path'] = str(args.config)
+    _atomic_write_json(summary_path, summary)
     print(f"Run summary saved to {summary_path}")
-    
+
+    final_status = summary.get('status', 'completed')
     print(f"\n{'='*80}")
-    print(f"Training completed successfully!")
+    if final_status == 'completed':
+        print("Training completed successfully!")
+    else:
+        print(f"Training ended early (status='{final_status}'). "
+              f"Partial artifacts saved.")
     print(f"Results saved to: {run_dir}")
     print(f"{'='*80}")
 

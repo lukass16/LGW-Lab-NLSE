@@ -21,8 +21,8 @@ training:
   amplitude_downscale: 1e-1
   mask_percent: 0.8
   m: 8
-  w_mse: 1e4
-  w_pen: 1e3
+  w_mse: 1e2
+  w_pen: 1e1
   lr: 0.5
   N_train: 1500
   loss_fn: hg_phase

@@ -3,10 +3,8 @@
 #SBATCH --job-name=xpm_analysis
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
-#SBATCH --gpus=rtx_5000_ada:1
-#SBATCH --partition=priority_gpu
-#SBATCH --account=prio_lgw23
-#SBATCH --mem=5G
+#SBATCH --gpus=1
+#SBATCH --partition=gpu
 #SBATCH --time=3:00:00
 
 export WANDB_API_KEY=fa6aa2781732fe60c4a13ca88d919b7f56360fd8

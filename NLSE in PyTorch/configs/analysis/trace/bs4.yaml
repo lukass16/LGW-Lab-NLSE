@@ -1,4 +1,4 @@
-# Analysis: Trace Loss - L-BFGS - Batch Size 4
+# Analysis: Trace Loss - Adam - Batch Size 4
 
 simulation:
   Lz: 1e-3
@@ -23,11 +23,11 @@ training:
   m: 8
   w_mse: 1e4
   w_pen: 1e3
-  lr: 0.9
-  N_train: 10000
+  lr: 0.1
+  N_train: 2500
   loss_fn: trace
   transformation: identity
-  optimizer: lbfgs
+  optimizer: adam
 
 plotting:
   plot_percent: 0.3
@@ -37,7 +37,7 @@ wandb:
   project: "xpm-analysis"
   entity: lgwlab
   name: analysis-trace-bs4
-  tags: ["analysis", "trace", "identity", "lbfgs", "bs4"]
+  tags: ["analysis", "trace", "identity", "adam", "bs4"]
   notes: "Analysis: Trace loss, batch_size=4"
 
 device:
