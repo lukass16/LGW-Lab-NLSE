@@ -1,5 +1,22 @@
-/NLSE in PyTorch/runs
-NLSE in PyTorch/trainjoberr_gpu.txt
-NLSE in PyTorch/trainjobout_gpu.txt
-NLSE in PyTorch/ring_batch_err.txt
-NLSE in PyTorch/ring_batch_out.txt
+# Live outputs
+runs/
+results/
+
+# Experiment trackers and caches
+**/wandb/
+**/.ipynb_checkpoints/
+**/__pycache__/
+*.pyc
+.DS_Store
+
+# Heavy archived dumps (source leftovers stay tracked)
+archive/results_full/**/wandb/
+archive/results_full/**/debug*.log
+archive/misc/
+
+# Local env
+.venv/
+.env
+*.egg-info/
+dist/
+build/

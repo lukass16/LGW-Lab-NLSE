@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nlse"
+version = "0.1.0"
+description = "PyTorch NLSE / XPM solvers and inverse-design research tools"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "torch",
+]
+
+[project.optional-dependencies]
+viz = ["matplotlib"]
+train = ["matplotlib", "tqdm", "pyyaml", "wandb"]
+
+[tool.setuptools.packages.find]
+include = ["nlse*", "approaches*"]
